@@ -1,41 +1,37 @@
-# NOVA — Tech Products Website
+# NOVA Guard — Anti-Theft Robot (Product Landing Page)
 
-A premium, SpaceX-inspired marketing site for a fictional technology brand, **NOVA**.
-Built with plain **HTML, CSS, and JavaScript** — no frameworks, no build step.
+A premium, SpaceX-inspired **single-product landing page** for a fictional
+anti-theft robot, **NOVA Guard**. Built with plain **HTML, CSS, and JavaScript**
+— no frameworks, no build step.
 
-## Features
+## Sections
 
-- Full-screen, full-viewport scroll sections (`100vh`)
-- Staggered `fadeInUp` text animations
-- Hover-fill buttons and animated underline navigation
-- Responsive hamburger → X mobile menu that slides in from the right
+1. **Hero** — one full-screen section showing the product (drop a photo at `img/robot.jpg`)
+2. **Functions** — feature cards + animated stat counters
+3. **Intro Video** — responsive embedded video
+4. **Price List** — three pricing tiers
+5. **Buy** — call-to-action with buy link
+
+## Navigation
+
+Home · Product · Support · Contact · My Account (smooth-scroll anchors).
+
+## Effects (from the SpaceX tutorial, rewritten)
+
+- Full-viewport hero, staggered `fadeInUp` text
+- Hover-fill buttons, animated underline nav
+- Hamburger → X mobile menu that slides in from the right
 - Bouncing scroll arrow
-- Scroll-triggered animated stat counters on product pages
+- Scroll-triggered animated stat counters
 - Layered CSS-gradient backgrounds (no external image dependencies)
 
-## Pages
+## Add your own product photo
 
-| File | Page |
-|------|------|
-| `index.html` | Homepage with scrolling product showcases |
-| `phone.html` | Nova Phone X — hero + animated specs |
-| `laptop.html` | Nova Book Pro — hero + animated specs |
-| `audio.html` | Nova Buds — hero + animated specs |
+Save your image as `img/robot.jpg` (or edit the `src` in `index.html`).
+Until then a glow placeholder is shown.
 
 ## Run locally
 
-It's a static site — just open `index.html` in a browser, or serve it:
-
 ```bash
-python3 -m http.server 8000
-# then visit http://localhost:8000
+python3 -m http.server 8000   # then open http://localhost:8000
 ```
-
-## Tech / skills practiced
-
-HTML structure · CSS animations & transitions · `transform`/`@keyframes` ·
-responsive `@media` queries · vanilla-JS DOM + `classList.toggle` ·
-scroll events · `setTimeout` count-up animation.
-
-> Styling and interaction patterns inspired by Brad Traversy's SpaceX website tutorial,
-> rewritten from scratch with original tech-product content.

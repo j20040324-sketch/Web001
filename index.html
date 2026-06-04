@@ -6,44 +6,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="NOVA — premium technology, engineered for tomorrow."
+      content="NOVA Guard — the anti-theft robot that watches over your space, day and night."
     />
     <link rel="stylesheet" href="css/style.css" />
     <script src="js/script.js" defer></script>
-    <title>NOVA — The Future, Engineered</title>
+    <title>NOVA Guard — Anti-Theft Robot</title>
   </head>
   <body>
     <div id="overlay"></div>
     <div id="mobile-menu" class="mobile-main-menu">
       <ul>
-        <li><a href="#">Story</a></li>
-        <li><a href="#">Newsroom</a></li>
-        <li><a href="#">Careers</a></li>
-        <li><a href="#">Support</a></li>
-        <li><a href="#">Shop</a></li>
-
-        <li class="mobile-only"><a href="phone.html">Nova Phone</a></li>
-        <li class="mobile-only"><a href="laptop.html">Nova Book</a></li>
-        <li class="mobile-only"><a href="audio.html">Nova Buds</a></li>
-        <li class="mobile-only"><a href="#">Nova Watch</a></li>
-        <li class="mobile-only"><a href="#">Smart Home</a></li>
-        <li class="mobile-only"><a href="#">Accessories</a></li>
+        <li><a href="#home">Home</a></li>
+        <li><a href="#product">Product</a></li>
+        <li><a href="#support">Support</a></li>
+        <li><a href="#contact">Contact</a></li>
+        <li><a href="#account">My Account</a></li>
       </ul>
     </div>
 
     <header class="main-header">
       <div class="logo">
-        <a href="index.html">NOVA</a>
+        <a href="#home">NOVA</a>
       </div>
       <nav class="desktop-main-menu">
         <ul>
-          <li><a href="phone.html">Nova Phone</a></li>
-          <li><a href="laptop.html">Nova Book</a></li>
-          <li><a href="audio.html">Nova Buds</a></li>
-          <li><a href="#">Nova Watch</a></li>
-          <li><a href="#">Smart Home</a></li>
-          <li><a href="#">Support</a></li>
-          <li><a href="#">Shop</a></li>
+          <li><a href="#home">Home</a></li>
+          <li><a href="#product">Product</a></li>
+          <li><a href="#support">Support</a></li>
+          <li><a href="#contact">Contact</a></li>
+          <li><a href="#account">My Account</a></li>
         </ul>
       </nav>
     </header>
@@ -55,15 +46,36 @@
       <span class="hamburger-bottom"></span>
     </button>
 
-    <!-- Section A — Hero -->
-    <section class="section-a">
-      <div class="section-inner">
-        <h4>Introducing NOVA</h4>
-        <h2>The Future, Engineered</h2>
-        <a href="phone.html" class="btn">
-          <div class="hover"></div>
-          <span>Explore</span>
-        </a>
+    <!-- Hero: the one full-screen section showing the product -->
+    <section id="home" class="section-hero">
+      <div class="hero-grid">
+        <div class="hero-text">
+          <h4>Meet NOVA Guard</h4>
+          <h2>The Anti-Theft Robot</h2>
+          <p>
+            Autonomous patrol, 360° vision, and an alarm that means business.
+            NOVA Guard watches over your space so you don't have to.
+          </p>
+          <div class="hero-actions">
+            <a href="#pricing" class="btn">
+              <div class="hover"></div>
+              <span>Buy Now</span>
+            </a>
+            <a href="#video" class="btn btn-ghost">
+              <div class="hover"></div>
+              <span>Watch Video</span>
+            </a>
+          </div>
+        </div>
+        <div class="hero-photo">
+          <!-- Drop your product photo at img/robot.jpg (or change this src).
+               Until then the broken image is hidden and a glow placeholder shows. -->
+          <img
+            src="img/robot.jpg"
+            alt="NOVA Guard anti-theft robot"
+            onerror="this.style.display='none'"
+          />
+        </div>
       </div>
 
       <div class="scroll-arrow">
@@ -78,119 +90,155 @@
       </div>
     </section>
 
-    <!-- Section B — Phone -->
-    <section class="section-b">
-      <div class="section-inner">
-        <h4>Now Available</h4>
-        <h2>Nova Phone X</h2>
-        <a href="phone.html" class="btn">
-          <div class="hover"></div>
-          <span>Discover</span>
-        </a>
-      </div>
+    <!-- Functions -->
+    <section id="product" class="content-section">
+      <div class="container">
+        <h3 class="section-title">Functions</h3>
+        <div class="features">
+          <div class="feature-card">
+            <div class="feature-icon">🛡️</div>
+            <h5>Motion Detection</h5>
+            <p>Smart sensors spot intruders and trigger an instant response.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">📷</div>
+            <h5>360° HD Camera</h5>
+            <p>Full-surround vision with crisp night-mode recording.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🔊</div>
+            <h5>120dB Siren</h5>
+            <p>A piercing alarm scares off intruders the moment they're seen.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">📱</div>
+            <h5>App Control</h5>
+            <p>Live view, alerts, and patrol scheduling from your phone.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🤖</div>
+            <h5>Auto Patrol</h5>
+            <p>Navigates your space on its own and returns to charge.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">☎️</div>
+            <h5>Auto Dial</h5>
+            <p>Calls you — or the authorities — when a threat is detected.</p>
+          </div>
+        </div>
 
-      <div class="scroll-arrow">
-        <svg width="30px" height="20px">
-          <path
-            stroke="#ffffff"
-            fill="none"
-            stroke-width="2px"
-            d="M2.000,5.000 L15.000,18.000 L28.000,5.000 "
-          ></path>
-        </svg>
-      </div>
-    </section>
-
-    <!-- Section C — Laptop -->
-    <section class="section-c">
-      <div class="section-inner">
-        <h4>Built for Creators</h4>
-        <h2>Nova Book Pro</h2>
-        <a href="laptop.html" class="btn">
-          <div class="hover"></div>
-          <span>Discover</span>
-        </a>
-      </div>
-
-      <div class="scroll-arrow">
-        <svg width="30px" height="20px">
-          <path
-            stroke="#ffffff"
-            fill="none"
-            stroke-width="2px"
-            d="M2.000,5.000 L15.000,18.000 L28.000,5.000 "
-          ></path>
-        </svg>
-      </div>
-    </section>
-
-    <!-- Section D — Audio -->
-    <section class="section-d">
-      <div class="section-inner">
-        <h4>Pure Sound</h4>
-        <h2>Nova Buds</h2>
-        <a href="audio.html" class="btn">
-          <div class="hover"></div>
-          <span>Discover</span>
-        </a>
-      </div>
-
-      <div class="scroll-arrow">
-        <svg width="30px" height="20px">
-          <path
-            stroke="#ffffff"
-            fill="none"
-            stroke-width="2px"
-            d="M2.000,5.000 L15.000,18.000 L28.000,5.000 "
-          ></path>
-        </svg>
+        <!-- Animated stats strip -->
+        <div class="stats">
+          <div>
+            <span class="counter" data-target="360">0</span>
+            <h4>Degree vision</h4>
+          </div>
+          <div>
+            <span class="counter" data-target="120">0</span>
+            <h4>dB siren</h4>
+          </div>
+          <div>
+            <span class="counter" data-target="30">0</span>
+            <h4>Day battery</h4>
+          </div>
+        </div>
       </div>
     </section>
 
-    <!-- Section E — Watch -->
-    <section class="section-e">
-      <div class="section-inner">
-        <h4>Your Day, Tracked</h4>
-        <h2>Nova Watch Ultra</h2>
-        <a href="#" class="btn">
-          <div class="hover"></div>
-          <span>Discover</span>
-        </a>
-      </div>
-
-      <div class="scroll-arrow">
-        <svg width="30px" height="20px">
-          <path
-            stroke="#ffffff"
-            fill="none"
-            stroke-width="2px"
-            d="M2.000,5.000 L15.000,18.000 L28.000,5.000 "
-          ></path>
-        </svg>
+    <!-- Intro Video -->
+    <section id="support" class="content-section alt">
+      <div class="container">
+        <h3 class="section-title">Intro Video</h3>
+        <p class="section-sub">See NOVA Guard on patrol.</p>
+        <div class="video-wrap">
+          <!-- Replace the src with your own product video link -->
+          <iframe
+            src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+            title="NOVA Guard intro video"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen
+          ></iframe>
+        </div>
       </div>
     </section>
 
-    <!-- Section F — Closing -->
-    <section class="section-f">
-      <div class="section-inner">
-        <h2>Engineered for tomorrow. Available today.</h2>
-        <a href="#" class="btn">
+    <!-- Price List -->
+    <section id="pricing" class="content-section">
+      <div class="container">
+        <h3 class="section-title">Price List</h3>
+        <p class="section-sub">Choose the guard that fits your space.</p>
+        <div class="pricing">
+          <div class="price-card">
+            <h5>Guard Lite</h5>
+            <div class="price">$299</div>
+            <ul>
+              <li>Motion detection</li>
+              <li>1080p camera</li>
+              <li>App alerts</li>
+              <li>8h battery</li>
+            </ul>
+            <a href="#contact" class="btn">
+              <div class="hover"></div>
+              <span>Buy Lite</span>
+            </a>
+          </div>
+          <div class="price-card featured">
+            <div class="badge">Most Popular</div>
+            <h5>Guard Pro</h5>
+            <div class="price">$499</div>
+            <ul>
+              <li>360° HD camera</li>
+              <li>120dB siren</li>
+              <li>Auto patrol</li>
+              <li>30 day battery</li>
+            </ul>
+            <a href="#contact" class="btn">
+              <div class="hover"></div>
+              <span>Buy Pro</span>
+            </a>
+          </div>
+          <div class="price-card">
+            <h5>Guard Max</h5>
+            <div class="price">$799</div>
+            <ul>
+              <li>Everything in Pro</li>
+              <li>Auto-dial authorities</li>
+              <li>Outdoor weatherproof</li>
+              <li>Priority support</li>
+            </ul>
+            <a href="#contact" class="btn">
+              <div class="hover"></div>
+              <span>Buy Max</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Buy / CTA -->
+    <section id="contact" class="content-section alt buy-cta">
+      <div class="container">
+        <h3 class="section-title">Get Your NOVA Guard</h3>
+        <p class="section-sub">
+          Free shipping, 2-year warranty, and a 30-day money-back guarantee.
+        </p>
+        <a href="https://example.com/buy" class="btn btn-big">
           <div class="hover"></div>
-          <span>Shop Now</span>
+          <span>Buy Now</span>
         </a>
       </div>
     </section>
 
-    <footer>
+    <footer id="account">
       <ul>
         <li>NOVA &copy; 2026</li>
-        <li><a href="#">Twitter</a></li>
-        <li><a href="#">YouTube</a></li>
-        <li><a href="#">Instagram</a></li>
-        <li><a href="#">Discord</a></li>
-        <li><a href="#">LinkedIn</a></li>
+        <li><a href="#home">Home</a></li>
+        <li><a href="#product">Product</a></li>
+        <li><a href="#support">Support</a></li>
+        <li><a href="#contact">Contact</a></li>
+        <li><a href="#account">My Account</a></li>
         <li><a href="#">Privacy</a></li>
-        <li><a href="#">Careers</a></li>
       </ul>
     </footer>
   </body>
