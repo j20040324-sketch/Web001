@@ -1,245 +1,181 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-year="2026">
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="NOVA Guard — the anti-theft robot that watches over your space, day and night."
+      content="AETHER — technology, elevated. A new house of obsessively engineered devices."
     />
     <link rel="stylesheet" href="css/style.css" />
-    <script src="js/script.js" defer></script>
-    <title>NOVA Guard — Anti-Theft Robot</title>
+    <script src="js/main.js" defer></script>
+    <title>AETHER — Technology, Elevated</title>
   </head>
   <body>
-    <div id="overlay"></div>
-    <div id="mobile-menu" class="mobile-main-menu">
-      <ul>
-        <li><a href="#home">Home</a></li>
-        <li><a href="#product">Product</a></li>
-        <li><a href="#support">Support</a></li>
-        <li><a href="#contact">Contact</a></li>
-        <li><a href="#account">My Account</a></li>
-      </ul>
-    </div>
+    <div id="site-header"></div>
 
-    <header class="main-header">
-      <div class="logo">
-        <a href="#home">NOVA</a>
-      </div>
-      <nav class="desktop-main-menu">
-        <ul>
-          <li><a href="#home">Home</a></li>
-          <li><a href="#product">Product</a></li>
-          <li><a href="#support">Support</a></li>
-          <li><a href="#contact">Contact</a></li>
-          <li><a href="#account">My Account</a></li>
-        </ul>
-      </nav>
-    </header>
-
-    <!-- Hamburger Menu -->
-    <button id="menu-btn" class="hamburger" type="button">
-      <span class="hamburger-top"></span>
-      <span class="hamburger-middle"></span>
-      <span class="hamburger-bottom"></span>
-    </button>
-
-    <!-- Hero: the one full-screen section showing the product -->
-    <section id="home" class="section-hero">
-      <div class="hero-grid">
-        <div class="hero-text">
-          <h4>Meet NOVA Guard</h4>
-          <h2>The Anti-Theft Robot</h2>
-          <p>
-            Autonomous patrol, 360° vision, and an alarm that means business.
-            NOVA Guard watches over your space so you don't have to.
-          </p>
-          <div class="hero-actions">
-            <a href="#pricing" class="btn">
-              <div class="hover"></div>
-              <span>Buy Now</span>
-            </a>
-            <a href="#video" class="btn btn-ghost">
-              <div class="hover"></div>
-              <span>Watch Video</span>
-            </a>
-          </div>
-        </div>
-        <div class="hero-photo">
-          <!-- Drop your product photo at img/robot.jpg (or change this src).
-               Until then the broken image is hidden and a glow placeholder shows. -->
-          <img
-            src="img/robot.jpg"
-            alt="NOVA Guard anti-theft robot"
-            onerror="this.style.display='none'"
-          />
-        </div>
-      </div>
-
-      <div class="scroll-arrow">
-        <svg width="30px" height="20px">
-          <path
-            stroke="#ffffff"
-            fill="none"
-            stroke-width="2px"
-            d="M2.000,5.000 L15.000,18.000 L28.000,5.000 "
-          ></path>
-        </svg>
-      </div>
-    </section>
-
-    <!-- Functions -->
-    <section id="product" class="content-section">
+    <!-- Hero -->
+    <section class="hero bg-home">
       <div class="container">
-        <h3 class="section-title">Functions</h3>
-        <div class="features">
-          <div class="feature-card">
-            <div class="feature-icon">🛡️</div>
-            <h5>Motion Detection</h5>
-            <p>Smart sensors spot intruders and trigger an instant response.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">📷</div>
-            <h5>360° HD Camera</h5>
-            <p>Full-surround vision with crisp night-mode recording.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">🔊</div>
-            <h5>120dB Siren</h5>
-            <p>A piercing alarm scares off intruders the moment they're seen.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">📱</div>
-            <h5>App Control</h5>
-            <p>Live view, alerts, and patrol scheduling from your phone.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">🤖</div>
-            <h5>Auto Patrol</h5>
-            <p>Navigates your space on its own and returns to charge.</p>
-          </div>
-          <div class="feature-card">
-            <div class="feature-icon">☎️</div>
-            <h5>Auto Dial</h5>
-            <p>Calls you — or the authorities — when a threat is detected.</p>
-          </div>
-        </div>
-
-        <!-- Animated stats strip -->
-        <div class="stats">
-          <div>
-            <span class="counter" data-target="360">0</span>
-            <h4>Degree vision</h4>
-          </div>
-          <div>
-            <span class="counter" data-target="120">0</span>
-            <h4>dB siren</h4>
-          </div>
-          <div>
-            <span class="counter" data-target="30">0</span>
-            <h4>Day battery</h4>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Intro Video -->
-    <section id="support" class="content-section alt">
-      <div class="container">
-        <h3 class="section-title">Intro Video</h3>
-        <p class="section-sub">See NOVA Guard on patrol.</p>
-        <div class="video-wrap">
-          <!-- Replace the src with your own product video link -->
-          <iframe
-            src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-            title="NOVA Guard intro video"
-            frameborder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowfullscreen
-          ></iframe>
-        </div>
-      </div>
-    </section>
-
-    <!-- Price List -->
-    <section id="pricing" class="content-section">
-      <div class="container">
-        <h3 class="section-title">Price List</h3>
-        <p class="section-sub">Choose the guard that fits your space.</p>
-        <div class="pricing">
-          <div class="price-card">
-            <h5>Guard Lite</h5>
-            <div class="price">$299</div>
-            <ul>
-              <li>Motion detection</li>
-              <li>1080p camera</li>
-              <li>App alerts</li>
-              <li>8h battery</li>
-            </ul>
-            <a href="#contact" class="btn">
-              <div class="hover"></div>
-              <span>Buy Lite</span>
-            </a>
-          </div>
-          <div class="price-card featured">
-            <div class="badge">Most Popular</div>
-            <h5>Guard Pro</h5>
-            <div class="price">$499</div>
-            <ul>
-              <li>360° HD camera</li>
-              <li>120dB siren</li>
-              <li>Auto patrol</li>
-              <li>30 day battery</li>
-            </ul>
-            <a href="#contact" class="btn">
-              <div class="hover"></div>
-              <span>Buy Pro</span>
-            </a>
-          </div>
-          <div class="price-card">
-            <h5>Guard Max</h5>
-            <div class="price">$799</div>
-            <ul>
-              <li>Everything in Pro</li>
-              <li>Auto-dial authorities</li>
-              <li>Outdoor weatherproof</li>
-              <li>Priority support</li>
-            </ul>
-            <a href="#contact" class="btn">
-              <div class="hover"></div>
-              <span>Buy Max</span>
-            </a>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Buy / CTA -->
-    <section id="contact" class="content-section alt buy-cta">
-      <div class="container">
-        <h3 class="section-title">Get Your NOVA Guard</h3>
-        <p class="section-sub">
-          Free shipping, 2-year warranty, and a 30-day money-back guarantee.
+        <p class="eyebrow reveal">Inspiring the future since 2018</p>
+        <h1 class="reveal d1">Engineered<br />beyond limits</h1>
+        <p class="sub reveal d2">
+          AETHER builds devices for people who refuse the ordinary —
+          obsessive engineering, uncompromising design, made to outlast trends.
         </p>
-        <a href="https://example.com/buy" class="btn btn-big">
-          <div class="hover"></div>
-          <span>Buy Now</span>
-        </a>
+        <div class="hero-actions reveal d3">
+          <a href="models.html" class="btn btn-accent">Discover the range</a>
+          <a href="company.html" class="btn">Our story</a>
+        </div>
       </div>
     </section>
 
-    <footer id="account">
-      <ul>
-        <li>NOVA &copy; 2026</li>
-        <li><a href="#home">Home</a></li>
-        <li><a href="#product">Product</a></li>
-        <li><a href="#support">Support</a></li>
-        <li><a href="#contact">Contact</a></li>
-        <li><a href="#account">My Account</a></li>
-        <li><a href="#">Privacy</a></li>
-      </ul>
-    </footer>
+    <!-- Model lineup -->
+    <section class="section">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="eyebrow">The Collection</p>
+          <h2>Four icons. One obsession.</h2>
+          <p>Each AETHER device is engineered as a flagship — never a compromise, never a filler.</p>
+        </div>
+        <div class="grid grid-4">
+          <a class="card reveal" href="halo.html">
+            <div class="card-visual bg-halo"></div>
+            <div class="card-body">
+              <span class="card-tag">Smartphone</span>
+              <h4>Aether Halo</h4>
+              <p>Light, made intelligent. A titanium flagship with a display that disappears.</p>
+              <span class="btn-link">Discover <span class="arrow">→</span></span>
+            </div>
+          </a>
+          <a class="card reveal d1" href="forge.html">
+            <div class="card-visual bg-forge"></div>
+            <div class="card-body">
+              <span class="card-tag">Workstation</span>
+              <h4>Aether Forge</h4>
+              <p>Power without compromise. In-house silicon for creators who never stop.</p>
+              <span class="btn-link">Discover <span class="arrow">→</span></span>
+            </div>
+          </a>
+          <a class="card reveal d2" href="pulse.html">
+            <div class="card-visual bg-pulse"></div>
+            <div class="card-body">
+              <span class="card-tag">Audio</span>
+              <h4>Aether Pulse</h4>
+              <p>Sound, perfected. Adaptive cancellation and spatial audio that surrounds you.</p>
+              <span class="btn-link">Discover <span class="arrow">→</span></span>
+            </div>
+          </a>
+          <a class="card reveal d3" href="orbit.html">
+            <div class="card-visual bg-orbit"></div>
+            <div class="card-body">
+              <span class="card-tag">Wearable</span>
+              <h4>Aether Orbit</h4>
+              <p>Your day, in orbit. Health, focus and a week of battery on your wrist.</p>
+              <span class="btn-link">Discover <span class="arrow">→</span></span>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Story feature rows -->
+    <section class="section section-alt">
+      <div class="container">
+        <div class="feature-row" style="border-top: 1px solid var(--line-soft)">
+          <div class="feature-text reveal">
+            <p class="eyebrow">Design</p>
+            <h3>Obsession, made tangible</h3>
+            <p>
+              Every surface is considered, every gram justified. We machine
+              from solid aerospace alloys and finish by hand, because details
+              you can't see are still details you can feel.
+            </p>
+            <a href="company.html" class="btn-link">The AETHER way <span class="arrow">→</span></a>
+          </div>
+          <div class="feature-visual bg-home reveal d1"></div>
+        </div>
+        <div class="feature-row" style="border-bottom: none">
+          <div class="feature-text reveal">
+            <p class="eyebrow">Technology</p>
+            <h3>Silicon built in-house</h3>
+            <p>
+              From the Aether Neural Engine to our adaptive power core, our
+              hardware and software are designed as one — so performance never
+              waits on compromise.
+            </p>
+            <a href="forge.html" class="btn-link">Explore the silicon <span class="arrow">→</span></a>
+          </div>
+          <div class="feature-visual bg-forge reveal d1"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats -->
+    <section class="section">
+      <div class="container">
+        <div class="stats">
+          <div class="stat reveal">
+            <div class="num"><span class="counter" data-target="42">0</span></div>
+            <div class="label">Countries served</div>
+          </div>
+          <div class="stat reveal d1">
+            <div class="num"><span class="counter" data-target="18">0</span><span class="suffix">M</span></div>
+            <div class="label">Devices shipped</div>
+          </div>
+          <div class="stat reveal d2">
+            <div class="num"><span class="counter" data-target="900">0</span><span class="suffix">+</span></div>
+            <div class="label">Patents granted</div>
+          </div>
+          <div class="stat reveal d3">
+            <div class="num"><span class="counter" data-target="99.2" data-decimals="1">0</span><span class="suffix">%</span></div>
+            <div class="label">Owner satisfaction</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- News teaser -->
+    <section class="section section-alt">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="eyebrow">Newsroom</p>
+          <h2>Latest from AETHER</h2>
+        </div>
+        <div class="reveal d1">
+          <a class="news-item" href="news.html">
+            <span class="date">12 May 2026</span>
+            <div>
+              <h4>Aether Halo wins Design of the Year</h4>
+              <p>The titanium flagship takes the industry's top honour for its disappearing display.</p>
+            </div>
+            <span class="btn-link">Read <span class="arrow">→</span></span>
+          </a>
+          <a class="news-item" href="news.html">
+            <span class="date">28 Mar 2026</span>
+            <div>
+              <h4>Forge silicon hits 3nm</h4>
+              <p>Our next-generation workstation core delivers a 40% leap in efficiency.</p>
+            </div>
+            <span class="btn-link">Read <span class="arrow">→</span></span>
+          </a>
+        </div>
+        <div style="margin-top: 40px" class="reveal d2">
+          <a href="news.html" class="btn">All news</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-band bg-home">
+      <div class="container reveal">
+        <p class="eyebrow">Begin</p>
+        <h2>Find your AETHER</h2>
+        <a href="models.html" class="btn btn-accent">Explore the range</a>
+      </div>
+    </section>
+
+    <div id="site-footer"></div>
   </body>
 </html>

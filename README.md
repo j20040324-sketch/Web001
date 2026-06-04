@@ -1,37 +1,54 @@
-# NOVA Guard — Anti-Theft Robot (Product Landing Page)
+# AETHER — Luxury Tech Brand Website
 
-A premium, SpaceX-inspired **single-product landing page** for a fictional
-anti-theft robot, **NOVA Guard**. Built with plain **HTML, CSS, and JavaScript**
-— no frameworks, no build step.
+A multi-page, Lamborghini-inspired marketing site for a fictional premium
+technology house, **AETHER**. Built with plain **HTML, CSS, and JavaScript** —
+no frameworks, no build step. Deeply clickable, every section complete,
+including a full set of legal/terms pages.
 
-## Sections
+## Pages
 
-1. **Hero** — one full-screen section showing the product (drop a photo at `img/robot.jpg`)
-2. **Functions** — feature cards + animated stat counters
-3. **Intro Video** — responsive embedded video
-4. **Price List** — three pricing tiers
-5. **Buy** — call-to-action with buy link
+| Page | File |
+|------|------|
+| Home | `index.html` |
+| Models (overview) | `models.html` |
+| Aether Halo (smartphone) | `halo.html` |
+| Aether Forge (workstation) | `forge.html` |
+| Aether Pulse (audio) | `pulse.html` |
+| Aether Orbit (wearable) | `orbit.html` |
+| Company / About | `company.html` |
+| News | `news.html` |
+| Contact | `contact.html` |
+| Privacy Policy | `privacy.html` |
+| Cookie Policy | `cookie.html` |
+| Terms & Conditions | `terms.html` |
+| Legal Notice | `legal.html` |
 
-## Navigation
+## Design "skills" borrowed from Lamborghini.com
 
-Home · Product · Support · Contact · My Account (smooth-scroll anchors).
+- Cinematic full-viewport hero sections with large uppercase display type
+- Minimalist luxury palette (near-black + champagne-gold accent), wide letter-spacing
+- Sticky header that turns translucent on scroll, with a hover mega-dropdown for Models
+- Outline buttons that fill on hover; animated underline nav links
+- Scroll-reveal animations (IntersectionObserver) and easing-driven stat counters
+- Alternating full-width feature blocks, product spec tables, pricing tiers
+- A comprehensive multi-column footer with newsletter, social, and legal links
 
-## Effects (from the SpaceX tutorial, rewritten)
+## Architecture
 
-- Full-viewport hero, staggered `fadeInUp` text
-- Hover-fill buttons, animated underline nav
-- Hamburger → X mobile menu that slides in from the right
-- Bouncing scroll arrow
-- Scroll-triggered animated stat counters
-- Layered CSS-gradient backgrounds (no external image dependencies)
-
-## Add your own product photo
-
-Save your image as `img/robot.jpg` (or edit the `src` in `index.html`).
-Until then a glow placeholder is shown.
+- `css/style.css` — the full design system
+- `js/main.js` — injects the shared **header** and **footer** into every page
+  (via `#site-header` / `#site-footer` placeholders) and wires up the mobile
+  menu, sticky header, scroll reveals, counters and demo forms. Edit the nav or
+  footer in one place and it updates everywhere.
 
 ## Run locally
+
+It's a static site. Open `index.html`, or serve it:
 
 ```bash
 python3 -m http.server 8000   # then open http://localhost:8000
 ```
+
+> Design and interaction patterns inspired by lamborghini.com, rewritten from
+> scratch with original content. AETHER is fictional; all specs, prices and
+> legal text are illustrative only and not legal advice.

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" data-year="2026">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Contact AETHER — sales, support, press and store locations." />
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="js/main.js" defer></script>
+    <title>Contact — AETHER</title>
+  </head>
+  <body>
+    <div id="site-header"></div>
+
+    <header class="page-header bg-home">
+      <div class="container">
+        <p class="eyebrow reveal">Contact</p>
+        <h1 class="reveal d1">Get in touch</h1>
+        <p class="sub reveal d2">Sales, support or press — we're here to help.</p>
+      </div>
+    </header>
+
+    <section class="section">
+      <div class="container">
+        <div class="contact-grid">
+          <div class="reveal">
+            <form data-demo>
+              <div class="field">
+                <label for="name">Name</label>
+                <input id="name" type="text" required />
+              </div>
+              <div class="field">
+                <label for="email">Email</label>
+                <input id="email" type="email" required />
+              </div>
+              <div class="field">
+                <label for="topic">Topic</label>
+                <select id="topic">
+                  <option>Sales enquiry</option>
+                  <option>Product support</option>
+                  <option>Press</option>
+                  <option>Careers</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="message">Message</label>
+                <textarea id="message" required></textarea>
+              </div>
+              <button type="submit" class="btn btn-accent">Send message</button>
+              <p data-demo-msg style="margin-top: 16px; font-size: 14px" class="muted"></p>
+            </form>
+          </div>
+
+          <div class="reveal d1">
+            <div class="contact-detail">
+              <div class="k">Sales</div>
+              <p>sales@aether.example</p>
+              <p class="muted">+39 02 0000 0000 · Mon–Fri, 9–18 CET</p>
+            </div>
+            <div class="contact-detail">
+              <div class="k">Support</div>
+              <p>support@aether.example</p>
+              <p class="muted">24/7 chat in the AETHER app</p>
+            </div>
+            <div class="contact-detail">
+              <div class="k">Press</div>
+              <p>press@aether.example</p>
+            </div>
+            <div class="contact-detail">
+              <div class="k">Headquarters</div>
+              <p>AETHER Technologies S.p.A.</p>
+              <p class="muted">Via del Futuro 1, 20121 Milan, Italy</p>
+            </div>
+            <div class="contact-detail" style="border-bottom: none">
+              <div class="k">Flagship stores</div>
+              <p class="muted">Milan · London · New York · Tokyo · Dubai · Singapore</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div id="site-footer"></div>
+  </body>
+</html>
