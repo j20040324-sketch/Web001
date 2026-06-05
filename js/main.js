@@ -6,56 +6,53 @@
    (header/footer) is generated per-language from the tables below.
    ============================================================ */
 
-const SERVICES = [
-  { href: 'cloud.html', zh: 'NOVAI 云', en: 'NOVAI Cloud', tagZh: '云基础设施', tagEn: 'Cloud Infrastructure' },
-  { href: 'intelligence.html', zh: 'NOVAI 智能', en: 'NOVAI Intelligence', tagZh: 'AI 与数据', tagEn: 'AI & Data' },
-  { href: 'secure.html', zh: 'NOVAI 安全', en: 'NOVAI Secure', tagZh: '网络安全', tagEn: 'Cybersecurity' },
-  { href: 'build.html', zh: 'NOVAI 开发', en: 'NOVAI Build', tagZh: '软件工程', tagEn: 'Software Engineering' },
-];
-
-const SERVICE_PAGES = ['services.html', ...SERVICES.map((s) => s.href)];
+const PRODUCT_PAGES = ['product.html', 'pricing.html'];
 
 const T = {
   nav: {
-    services: { zh: '服务', en: 'Services' },
+    product: { zh: '产品', en: 'Product' },
+    pricing: { zh: '价格', en: 'Pricing' },
     company: { zh: '公司', en: 'Company' },
-    news: { zh: '新闻', en: 'News' },
     contact: { zh: '联系', en: 'Contact' },
   },
   mini: {
-    portal: { zh: '客户门户', en: 'Client Portal' },
-    book: { zh: '预约咨询', en: 'Book a Consult' },
+    login: { zh: '登录', en: 'Sign in' },
+    trial: { zh: '免费试用', en: 'Start free' },
   },
   mobile: {
     home: { zh: '首页 Home', en: 'Home' },
-    services: { zh: '服务 Services', en: 'Services' },
+    product: { zh: '产品 Product', en: 'Product' },
+    features: { zh: '功能 Features', en: 'Features' },
+    how: { zh: '工作原理 How it works', en: 'How it works' },
+    pricing: { zh: '价格 Pricing', en: 'Pricing' },
     company: { zh: '公司 Company', en: 'Company' },
-    news: { zh: '新闻 News', en: 'News' },
     contact: { zh: '联系 Contact', en: 'Contact' },
-    book: { zh: '预约咨询', en: 'Book a Consult' },
+    trial: { zh: '免费试用', en: 'Start free' },
   },
   footer: {
     tagline: {
-      zh: '科技服务，臻于卓越。从云到 AI、从安全到开发，为企业打造可靠的数字基座。',
-      en: 'Technology services, elevated. From cloud to AI, security to software — a reliable digital foundation for your business.',
+      zh: 'NOVAI Flow — 面向团队的 AI 工作流平台。把重复工作交给自动化，让团队专注更重要的事。',
+      en: 'NOVAI Flow — the AI workflow platform for teams. Automate the repetitive so your team can focus on what matters.',
     },
-    servicesH: { zh: '服务 Services', en: 'Services' },
+    productH: { zh: '产品 Product', en: 'Product' },
     companyH: { zh: '公司 Company', en: 'Company' },
     legalH: { zh: '法律 Legal', en: 'Legal' },
-    allServices: { zh: '全部服务', en: 'All services' },
+    features: { zh: '功能特性', en: 'Features' },
+    how: { zh: '工作原理', en: 'How it works' },
+    pricing: { zh: '价格方案', en: 'Pricing' },
+    trial: { zh: '免费试用', en: 'Start free' },
     about: { zh: '关于我们', en: 'About' },
-    newsroom: { zh: '新闻动态', en: 'Newsroom' },
+    newsroom: { zh: '更新日志', en: 'Changelog' },
     careers: { zh: '加入我们', en: 'Careers' },
     contactUs: { zh: '联系我们', en: 'Contact us' },
-    sustainability: { zh: '可持续', en: 'Sustainability' },
     privacy: { zh: '隐私政策', en: 'Privacy Policy' },
     cookie: { zh: 'Cookie 政策', en: 'Cookie Policy' },
     terms: { zh: '服务条款', en: 'Terms & Conditions' },
     legalNotice: { zh: '法律声明', en: 'Legal Notice' },
     accessibility: { zh: '无障碍', en: 'Accessibility' },
     copyright: {
-      zh: 'NOVAI 科技服务有限公司 版权所有 · All rights reserved.',
-      en: 'NOVAI Technology Services Co., Ltd. All rights reserved.',
+      zh: 'NOVAI 科技有限公司 版权所有 · All rights reserved.',
+      en: 'NOVAI Inc. All rights reserved.',
     },
   },
 };
@@ -75,19 +72,11 @@ function t(node) {
 /* ---------- Header ---------- */
 function headerHTML() {
   const page = currentPage();
-  const isServices = SERVICE_PAGES.includes(page);
-
-  const dropdown = SERVICES.map(
-    (s) =>
-      `<a href="${s.href}">${LANG === 'en' ? s.en : s.zh}<span>${
-        LANG === 'en' ? s.tagEn : s.en + ' · ' + s.tagZh
-      }</span></a>`
-  ).join('');
 
   const navItems = [
-    { href: 'services.html', label: t(T.nav.services), active: isServices, dropdown },
+    { href: 'product.html', label: t(T.nav.product), active: PRODUCT_PAGES.includes(page) && page === 'product.html' },
+    { href: 'pricing.html', label: t(T.nav.pricing), active: page === 'pricing.html' },
     { href: 'company.html', label: t(T.nav.company), active: page === 'company.html' },
-    { href: 'news.html', label: t(T.nav.news), active: page === 'news.html' },
     { href: 'contact.html', label: t(T.nav.contact), active: page === 'contact.html' },
   ]
     .map((item) => {
@@ -107,8 +96,8 @@ function headerHTML() {
         <ul>${navItems}</ul>
       </nav>
       <div class="header-actions">
-        <a class="mini" href="contact.html">${t(T.mini.portal)}</a>
-        <a class="mini" href="contact.html">${t(T.mini.book)}</a>
+        <a class="mini" href="contact.html">${t(T.mini.login)}</a>
+        <a class="mini" href="pricing.html">${t(T.mini.trial)}</a>
         <button class="lang-toggle" id="langToggle" type="button" aria-label="Switch language">${toggleLabel}</button>
         <button class="hamburger" id="hamburger" type="button" aria-label="Menu">
           <span></span><span></span><span></span>
@@ -120,14 +109,13 @@ function headerHTML() {
   <div class="overlay" id="overlay"></div>
   <nav class="mobile-nav" id="mobileNav">
     <a href="index.html">${t(T.mobile.home)}</a>
-    <a href="services.html">${t(T.mobile.services)}</a>
-    ${SERVICES.map(
-      (s) => `<a class="sub" href="${s.href}">${LANG === 'en' ? s.en : s.zh + ' · ' + s.en}</a>`
-    ).join('')}
+    <a href="product.html">${t(T.mobile.product)}</a>
+    <a class="sub" href="product.html#features">${t(T.mobile.features)}</a>
+    <a class="sub" href="product.html#how">${t(T.mobile.how)}</a>
+    <a href="pricing.html">${t(T.mobile.pricing)}</a>
     <a href="company.html">${t(T.mobile.company)}</a>
-    <a href="news.html">${t(T.mobile.news)}</a>
     <a href="contact.html">${t(T.mobile.contact)}</a>
-    <a href="contact.html">${t(T.mobile.book)}</a>
+    <a href="contact.html">${t(T.mobile.trial)}</a>
   </nav>`;
 }
 
@@ -151,13 +139,12 @@ function footerHTML() {
           </div>
         </div>
         <div class="footer-col">
-          <h5>${t(f.servicesH)}</h5>
+          <h5>${t(f.productH)}</h5>
           <ul>
-            <li><a href="cloud.html">${LANG === 'en' ? 'NOVAI Cloud' : 'NOVAI 云 · Cloud'}</a></li>
-            <li><a href="intelligence.html">${LANG === 'en' ? 'NOVAI Intelligence' : 'NOVAI 智能 · AI'}</a></li>
-            <li><a href="secure.html">${LANG === 'en' ? 'NOVAI Secure' : 'NOVAI 安全 · Secure'}</a></li>
-            <li><a href="build.html">${LANG === 'en' ? 'NOVAI Build' : 'NOVAI 开发 · Build'}</a></li>
-            <li><a href="services.html">${t(f.allServices)}</a></li>
+            <li><a href="product.html#features">${t(f.features)}</a></li>
+            <li><a href="product.html#how">${t(f.how)}</a></li>
+            <li><a href="pricing.html">${t(f.pricing)}</a></li>
+            <li><a href="contact.html">${t(f.trial)}</a></li>
           </ul>
         </div>
         <div class="footer-col">
@@ -167,7 +154,6 @@ function footerHTML() {
             <li><a href="news.html">${t(f.newsroom)}</a></li>
             <li><a href="company.html#careers">${t(f.careers)}</a></li>
             <li><a href="contact.html">${t(f.contactUs)}</a></li>
-            <li><a href="company.html#sustainability">${t(f.sustainability)}</a></li>
           </ul>
         </div>
         <div class="footer-col">

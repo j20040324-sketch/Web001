@@ -1,46 +1,34 @@
-# NOVAI 科技服务 — Tech Services Website
+# NOVAI Flow — 单品官网 Product Website
 
-一个多页、Lamborghini 风格的豪华企业站,内容为**科技服务公司 NOVAI**(云 · AI · 安全 · 软件开发)。
-纯 **HTML / CSS / JavaScript**,无框架、无构建步骤,双语(中文为主 + 英文点缀),可深入点击,
-每个版块完善,并包含完整的法律条款页。
+一个聚焦单一产品 **NOVAI Flow**（面向团队的 AI 工作流平台）的多页官网。
+纯 **HTML / CSS / JavaScript**，无框架、无构建步骤，双语（中文为主 + 英文点缀），
+首页精简主推，二级页展开细节。Lamborghini 风格的深色奢华设计。
 
 ## 页面 Pages
 
-| 页面 | 文件 |
-|------|------|
-| 首页 Home | `index.html` |
-| 服务总览 Services | `services.html` |
-| NOVAI 云 Cloud | `cloud.html` |
-| NOVAI 智能 Intelligence | `intelligence.html` |
-| NOVAI 安全 Secure | `secure.html` |
-| NOVAI 开发 Build | `build.html` |
-| 公司 Company | `company.html` |
-| 新闻 News | `news.html` |
-| 联系 Contact | `contact.html` |
-| 隐私政策 Privacy | `privacy.html` |
-| Cookie 政策 | `cookie.html` |
-| 服务条款 Terms | `terms.html` |
-| 法律声明 Legal Notice | `legal.html` |
+| 页面 | 文件 | 说明 |
+|------|------|------|
+| 首页 Home | `index.html` | 精简：主推 Hero + 三大价值 + 一个亮点 + CTA |
+| 产品 Product | `product.html` | 详细：功能特性、工作原理、企业级保障 |
+| 价格 Pricing | `pricing.html` | 免费 / 团队 / 企业 三档 + FAQ |
+| 公司 Company | `company.html` | 关于、方法论、招聘 |
+| 新闻 News | `news.html` | 动态 / 更新日志 |
+| 联系 Contact | `contact.html` | 表单 + 联系方式 |
+| 法律 Legal | `privacy/cookie/terms/legal.html` | 隐私 / Cookie / 条款 / 声明 |
 
-## 借鉴自 Lamborghini.com 的设计技巧
+## 导航
 
-- 电影感全屏 hero + 超大标题、奢华近黑配色 + 香槟金强调色
-- 滚动时变半透明的吸顶导航 + 服务下拉菜单
-- 悬停填充按钮、动画下划线导航
-- 滚动渐入动画(IntersectionObserver)与数字滚动计数
-- 交替大图区块、能力清单、合作方案分级
-- 多栏完整页脚(订阅、社交、法律链接)
+首页 · 产品 · 价格 · 公司 · 联系（+ 登录 / 免费试用）。
 
-## 语言切换 Language switch
+## 语言切换
 
-- 页头有 **中 / EN** 切换按钮,点击即可全站在中文与英文之间切换,选择记入 `localStorage`(键 `aether-lang`),刷新或跳转后保持。
-- 机制:中文是页面默认内容,英文写在每个可翻译元素的 `data-en` 属性里(输入框用 `data-en-placeholder`,`<title>` 用 `data-title-en`);`js/main.js` 切换时整页替换并按所选语言重新注入页头/页脚。
+页头 **中 / EN** 按钮，全站切换并记入 `localStorage`。中文是页面默认，英文写在每个元素的
+`data-en` 属性里（`<title>` 用 `data-title-en`）；`js/main.js` 切换时整页替换并重注入页头/页脚。
 
 ## 架构
 
-- `css/style.css` — 完整设计系统
-- `js/main.js` — 把共享的**页头**与**页脚**注入每个页面(`#site-header` / `#site-footer` 占位),
-  并初始化语言切换、移动菜单、吸顶、滚动渐入、计数器与演示表单。改一处导航,全站同步。
+- `css/style.css` — 设计系统
+- `js/main.js` — 注入共享页头/页脚、语言切换、移动菜单、吸顶、滚动渐入、计数器、演示表单
 
 ## 本地运行
 
@@ -48,5 +36,4 @@
 python3 -m http.server 8000   # 打开 http://localhost:8000
 ```
 
-> 设计与交互参考 lamborghini.com,内容从零重写。NOVAI 为虚构公司,
-> 所有服务、价格与法律文本仅为示例,不构成法律意见。
+> NOVAI / NOVAI Flow 为示例品牌，所有功能、价格与法律文本仅作演示。
