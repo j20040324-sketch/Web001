@@ -303,6 +303,25 @@ h5 {
   color: var(--fg);
 }
 
+/* Language toggle */
+.lang-toggle {
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: 'Sora', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.3s, border-color 0.3s, background 0.3s;
+}
+.lang-toggle:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 /* Hamburger */
 .hamburger {
   display: none;
