@@ -601,6 +601,20 @@ h5 {
 
 /* CN/EN headings use the same font-size (scale 1.00). */
 
+/* Chinese: a touch more letter-spacing for breathing room.
+   Elements with their own tracking (.btn/.nav-link/.eyebrow) keep theirs. */
+html[lang='zh-CN'] body {
+  letter-spacing: 0.04em;
+}
+html[lang='zh-CN'] h1,
+html[lang='zh-CN'] h2,
+html[lang='zh-CN'] h3,
+html[lang='zh-CN'] h4,
+html[lang='zh-CN'] h5,
+html[lang='zh-CN'] .hero h1 {
+  letter-spacing: 0.06em;
+}
+
 /* Hamburger */
 .hamburger {
   display: none;
