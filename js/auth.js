@@ -91,8 +91,9 @@
       if (!EMAIL.test(email.value.trim())) { setError(email, true); ok = false; }
       if (!pass.value) { setError(pass, true); ok = false; }
       if (!ok) return;
+      try { localStorage.setItem('novai-auth', email.value.trim()); } catch (e2) {}
       showMsg(tr('loginOk'));
-      loginForm.reset();
+      setTimeout(() => { window.location.href = 'account.html'; }, 700);
     });
   }
 
@@ -113,12 +114,33 @@
       if (!confirm.value || confirm.value !== pass.value) { setError(confirm, true); ok = false; }
       if (!agree.checked) { document.getElementById('agreeField').classList.add('show-err'); ok = false; }
       if (!ok) return;
+      try { localStorage.setItem('novai-auth', email.value.trim()); } catch (e2) {}
       showMsg(tr('signupOk'));
-      signupForm.reset();
-      const bar = document.getElementById('pwBar');
-      if (bar) bar.style.width = '0';
+      setTimeout(() => { window.location.href = 'account.html'; }, 700);
     });
     const agree = document.getElementById('agree');
     if (agree) agree.addEventListener('change', () => document.getElementById('agreeField').classList.remove('show-err'));
+  }
+
+  /* ---- Account page ---- */
+  const acct = document.getElementById('accountPage');
+  if (acct) {
+    let user = '';
+    try { user = localStorage.getItem('novai-auth') || ''; } catch (e) {}
+    if (!user) {
+      window.location.replace('login.html');
+    } else {
+      const emailEl = document.getElementById('acctEmail');
+      if (emailEl) emailEl.textContent = user;
+      const nameEl = document.getElementById('acctName');
+      if (nameEl) nameEl.textContent = user.split('@')[0];
+      acct.querySelectorAll('[data-action="signout"]').forEach((b) =>
+        b.addEventListener('click', (e) => {
+          e.preventDefault();
+          try { localStorage.removeItem('novai-auth'); } catch (err) {}
+          window.location.href = 'index.html';
+        })
+      );
+    }
   }
 })();

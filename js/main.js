@@ -16,8 +16,9 @@ const T = {
     contact: { zh: '联系', en: 'Contact' },
   },
   mini: {
-    login: { zh: '登录', en: 'Sign in' },
-    trial: { zh: '免费试用', en: 'Start free' },
+    signin: { zh: '登录', en: 'Sign in' },
+    signout: { zh: '退出登录', en: 'Sign out' },
+    account: { zh: '我的账户', en: 'My account' },
   },
   mobile: {
     home: { zh: '首页 Home', en: 'Home' },
@@ -27,7 +28,9 @@ const T = {
     pricing: { zh: '价格 Pricing', en: 'Pricing' },
     company: { zh: '公司 Company', en: 'Company' },
     contact: { zh: '联系 Contact', en: 'Contact' },
-    trial: { zh: '免费试用', en: 'Start free' },
+    account: { zh: '我的账户 My account', en: 'My account' },
+    signin: { zh: '登录 Sign in', en: 'Sign in' },
+    signout: { zh: '退出登录 Sign out', en: 'Sign out' },
   },
   footer: {
     tagline: {
@@ -68,6 +71,14 @@ function currentPage() {
 function t(node) {
   return LANG === 'en' ? node.en : node.zh;
 }
+/* demo auth state (no backend): the signed-in user's email, or '' */
+function getUser() {
+  try {
+    return localStorage.getItem('novai-auth') || '';
+  } catch (e) {
+    return '';
+  }
+}
 
 /* ---------- Header ---------- */
 function headerHTML() {
@@ -88,6 +99,13 @@ function headerHTML() {
 
   const toggleLabel = LANG === 'en' ? '中' : 'EN';
 
+  const user = getUser();
+  const authMini = user
+    ? `<a class="mini" href="#" data-action="signout">${t(T.mini.signout)}</a>
+        <a class="mini" href="account.html">${t(T.mini.account)}</a>`
+    : `<a class="mini" href="login.html">${t(T.mini.signin)}</a>
+        <a class="mini" href="login.html">${t(T.mini.account)}</a>`;
+
   return `
   <header class="site-header" id="siteHeader">
     <div class="header-inner">
@@ -96,8 +114,7 @@ function headerHTML() {
         <ul>${navItems}</ul>
       </nav>
       <div class="header-actions">
-        <a class="mini" href="login.html">${t(T.mini.login)}</a>
-        <a class="mini" href="signup.html">${t(T.mini.trial)}</a>
+        ${authMini}
         <button class="lang-toggle" id="langToggle" type="button" aria-label="Switch language">${toggleLabel}</button>
         <button class="hamburger" id="hamburger" type="button" aria-label="Menu">
           <span></span><span></span><span></span>
@@ -115,7 +132,11 @@ function headerHTML() {
     <a href="pricing.html">${t(T.mobile.pricing)}</a>
     <a href="company.html">${t(T.mobile.company)}</a>
     <a href="contact.html">${t(T.mobile.contact)}</a>
-    <a href="signup.html">${t(T.mobile.trial)}</a>
+    ${user
+      ? `<a href="account.html">${t(T.mobile.account)}</a>
+    <a href="#" data-action="signout">${t(T.mobile.signout)}</a>`
+      : `<a href="login.html">${t(T.mobile.signin)}</a>
+    <a href="login.html">${t(T.mobile.account)}</a>`}
   </nav>`;
 }
 
@@ -189,6 +210,19 @@ function mountChrome() {
   initMenu();
   initStickyHeader();
   bindLangToggle();
+  bindAuthActions();
+}
+
+function bindAuthActions() {
+  document.querySelectorAll('[data-action="signout"]').forEach((a) => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      try {
+        localStorage.removeItem('novai-auth');
+      } catch (err) {}
+      window.location.href = 'index.html';
+    });
+  });
 }
 
 /* ---------- i18n body swap ---------- */

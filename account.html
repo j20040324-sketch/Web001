@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-year="2026"
+  data-title-zh="我的账户 — NOVAI Flow"
+  data-title-en="My account — NOVAI Flow">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="NOVAI Flow 账户中心。" />
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="js/main.js" defer></script>
+    <script src="js/auth.js" defer></script>
+    <title>我的账户 — NOVAI Flow</title>
+  </head>
+  <body>
+    <div id="site-header"></div>
+
+    <main id="accountPage">
+      <header class="page-header bg-home">
+        <div class="container">
+          <p class="eyebrow reveal" data-en="My account">我的账户</p>
+          <h1 class="reveal d1" data-en="Dashboard">控制台</h1>
+          <p class="sub reveal d2">
+            <span data-en="Welcome back,">欢迎回来，</span>
+            <span id="acctName"></span>
+          </p>
+        </div>
+      </header>
+
+      <section class="section">
+        <div class="container">
+          <div class="grid grid-3">
+            <div class="card reveal">
+              <div class="card-body">
+                <span class="card-tag" data-en="Workflows">工作流</span>
+                <h4>3</h4>
+                <p data-en="Active automations running for your team.">为团队运行中的自动化。</p>
+                <a href="product.html" class="btn-link"><span data-en="Manage">管理</span> <span class="arrow">→</span></a>
+              </div>
+            </div>
+            <div class="card reveal d1">
+              <div class="card-body">
+                <span class="card-tag" data-en="Usage this month">本月用量</span>
+                <h4>1,280</h4>
+                <p data-en="AI runs used of your monthly allowance.">已使用的 AI 运行次数（本月额度内）。</p>
+                <a href="pricing.html" class="btn-link"><span data-en="Upgrade">升级</span> <span class="arrow">→</span></a>
+              </div>
+            </div>
+            <div class="card reveal d2">
+              <div class="card-body">
+                <span class="card-tag" data-en="Plan">当前计划</span>
+                <h4 data-en="Free">免费版</h4>
+                <p data-en="Upgrade to Team for unlimited workflows.">升级团队版即可无限工作流。</p>
+                <a href="pricing.html" class="btn-link"><span data-en="See plans">查看方案</span> <span class="arrow">→</span></a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section-alt">
+        <div class="container">
+          <div class="section-head reveal">
+            <p class="eyebrow" data-en="Account">账户设置</p>
+            <h2 data-en="Your details">你的资料</h2>
+          </div>
+          <dl class="specs reveal d1">
+            <div class="spec-row"><dt data-en="Email">邮箱</dt><dd id="acctEmail">—</dd></div>
+            <div class="spec-row"><dt data-en="Plan">计划</dt><dd data-en="Free">免费版</dd></div>
+            <div class="spec-row"><dt data-en="Team">团队</dt><dd data-en="Personal workspace">个人工作区</dd></div>
+            <div class="spec-row"><dt data-en="Member since">注册时间</dt><dd>2026</dd></div>
+          </dl>
+          <div style="margin-top: 36px" class="reveal d2">
+            <a href="#" class="btn" data-action="signout" data-en="Sign out">退出登录</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <div id="site-footer"></div>
+  </body>
+</html>
