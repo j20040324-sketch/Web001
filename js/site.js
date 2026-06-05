@@ -6,7 +6,7 @@
 (function () {
   /* ---- config (set these to go live) ---- */
   var GA_ID = ''; // e.g. 'G-XXXXXXXXXX' — leave empty to disable
-  var CHAT_ENABLED = true; // set false to hide the demo chat widget
+  var CHAT_ENABLED = false; // set true to show the demo chat widget
 
   var zh = function () {
     return document.documentElement.lang !== 'en';
