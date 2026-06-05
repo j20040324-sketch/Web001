@@ -85,14 +85,29 @@ function headerHTML() {
   const page = currentPage();
   const user = getUser();
 
+  const en = LANG === 'en';
+  const ddItems = [
+    { href: 'product.html#features', zh: '功能特性', en: 'Features', sZh: 'AI 节点 · 可视化编排', sEn: 'AI nodes · visual builder' },
+    { href: 'product.html#how', zh: '工作原理', en: 'How it works', sZh: '连接 → 编排 → 运行', sEn: 'Connect → build → run' },
+    { href: 'product.html', zh: '集成', en: 'Integrations', sZh: '200+ 应用接入', sEn: '200+ apps' },
+    { href: 'pricing.html', zh: '价格方案', en: 'Pricing', sZh: '免费开始', sEn: 'Start free' },
+  ];
+  const productDropdown = ddItems
+    .map((d) => `<a href="${d.href}">${en ? d.en : d.zh}<span>${en ? d.sEn : d.sZh}</span></a>`)
+    .join('');
+
   const navData = [
-    { href: 'product.html', label: t(T.nav.product), active: page === 'product.html' },
+    { href: 'product.html', label: t(T.nav.product), active: page === 'product.html', dropdown: productDropdown },
     { href: 'pricing.html', label: t(T.nav.pricing), active: page === 'pricing.html' },
     { href: 'company.html', label: t(T.nav.company), active: page === 'company.html' },
     { href: 'contact.html', label: t(T.nav.contact), active: page === 'contact.html' },
   ];
   const navItems = navData
-    .map((item) => `<li class="${item.active ? 'active' : ''}"><a class="nav-link" href="${item.href}">${item.label}</a></li>`)
+    .map((item) => {
+      const cls = (item.dropdown ? 'has-dropdown ' : '') + (item.active ? 'active' : '');
+      const dd = item.dropdown ? `<div class="dropdown">${item.dropdown}</div>` : '';
+      return `<li class="${cls.trim()}"><a class="nav-link" href="${item.href}">${item.label}</a>${dd}</li>`;
+    })
     .join('');
 
   const toggleLabel = LANG === 'en' ? '中' : 'EN';
