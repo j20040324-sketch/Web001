@@ -10,7 +10,6 @@ const PRODUCT_PAGES = ['product.html', 'pricing.html'];
 
 const T = {
   nav: {
-    myflow: { zh: '我的工作流', en: 'My Flow' },
     product: { zh: '产品', en: 'Product' },
     pricing: { zh: '价格', en: 'Pricing' },
     company: { zh: '公司', en: 'Company' },
@@ -29,7 +28,6 @@ const T = {
     pricing: { zh: '价格 Pricing', en: 'Pricing' },
     company: { zh: '公司 Company', en: 'Company' },
     contact: { zh: '联系 Contact', en: 'Contact' },
-    myflow: { zh: '我的工作流 My Flow', en: 'My Flow' },
     account: { zh: '我的账户 My account', en: 'My account' },
     signin: { zh: '登录 Sign in', en: 'Sign in' },
     signout: { zh: '退出登录 Sign out', en: 'Sign out' },
@@ -93,9 +91,6 @@ function headerHTML() {
     { href: 'company.html', label: t(T.nav.company), active: page === 'company.html' },
     { href: 'contact.html', label: t(T.nav.contact), active: page === 'contact.html' },
   ];
-  if (user) {
-    navData.unshift({ href: 'account.html', label: t(T.nav.myflow), active: page === 'account.html' });
-  }
   const navItems = navData
     .map((item) => `<li class="${item.active ? 'active' : ''}"><a class="nav-link" href="${item.href}">${item.label}</a></li>`)
     .join('');
@@ -135,8 +130,7 @@ function headerHTML() {
     <a href="company.html">${t(T.mobile.company)}</a>
     <a href="contact.html">${t(T.mobile.contact)}</a>
     ${user
-      ? `<a href="account.html">${t(T.mobile.myflow)}</a>
-    <a href="account.html">${t(T.mobile.account)}</a>
+      ? `<a href="account.html">${t(T.mobile.account)}</a>
     <a href="#" data-action="signout">${t(T.mobile.signout)}</a>`
       : `<a href="login.html">${t(T.mobile.signin)}</a>
     <a href="login.html">${t(T.mobile.account)}</a>`}
@@ -225,6 +219,23 @@ function bindAuthActions() {
       } catch (err) {}
       window.location.href = 'index.html';
     });
+  });
+}
+
+/* Show/hide elements by auth state: [data-auth="in"] only when signed in,
+   [data-auth="out"] only when signed out. If an auth-in card lives in a
+   grid-3, widen that grid to 4 columns so the extra block fits neatly. */
+function initAuthUI() {
+  const inUser = !!getUser();
+  document.querySelectorAll('[data-auth="in"]').forEach((el) => {
+    el.hidden = !inUser;
+    if (inUser && el.parentElement && el.parentElement.classList.contains('grid-3')) {
+      el.parentElement.classList.remove('grid-3');
+      el.parentElement.classList.add('grid-4');
+    }
+  });
+  document.querySelectorAll('[data-auth="out"]').forEach((el) => {
+    el.hidden = inUser;
   });
 }
 
@@ -374,6 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.documentElement.lang = LANG === 'en' ? 'en' : 'zh-CN';
   applyBody();
   mountChrome();
+  initAuthUI();
   initReveal();
   initCounters();
   initForms();
