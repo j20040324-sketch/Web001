@@ -1,5 +1,5 @@
 /* ============================================================
-   AETHER 科技服务 — shared chrome injection + i18n + interactions
+   NOVAI 科技服务 — shared chrome injection + i18n + interactions
    One file, included on every page with <script defer>.
    Language: Chinese is the in-HTML default; English lives in
    `data-en` attributes on each translatable element. The chrome
@@ -7,10 +7,10 @@
    ============================================================ */
 
 const SERVICES = [
-  { href: 'cloud.html', zh: 'Aether 云', en: 'Aether Cloud', tagZh: '云基础设施', tagEn: 'Cloud Infrastructure' },
-  { href: 'intelligence.html', zh: 'Aether 智能', en: 'Aether Intelligence', tagZh: 'AI 与数据', tagEn: 'AI & Data' },
-  { href: 'secure.html', zh: 'Aether 安全', en: 'Aether Secure', tagZh: '网络安全', tagEn: 'Cybersecurity' },
-  { href: 'build.html', zh: 'Aether 开发', en: 'Aether Build', tagZh: '软件工程', tagEn: 'Software Engineering' },
+  { href: 'cloud.html', zh: 'NOVAI 云', en: 'NOVAI Cloud', tagZh: '云基础设施', tagEn: 'Cloud Infrastructure' },
+  { href: 'intelligence.html', zh: 'NOVAI 智能', en: 'NOVAI Intelligence', tagZh: 'AI 与数据', tagEn: 'AI & Data' },
+  { href: 'secure.html', zh: 'NOVAI 安全', en: 'NOVAI Secure', tagZh: '网络安全', tagEn: 'Cybersecurity' },
+  { href: 'build.html', zh: 'NOVAI 开发', en: 'NOVAI Build', tagZh: '软件工程', tagEn: 'Software Engineering' },
 ];
 
 const SERVICE_PAGES = ['services.html', ...SERVICES.map((s) => s.href)];
@@ -54,8 +54,8 @@ const T = {
     legalNotice: { zh: '法律声明', en: 'Legal Notice' },
     accessibility: { zh: '无障碍', en: 'Accessibility' },
     copyright: {
-      zh: 'AETHER 科技服务有限公司 版权所有 · All rights reserved.',
-      en: 'AETHER Technology Services Co., Ltd. All rights reserved.',
+      zh: 'NOVAI 科技服务有限公司 版权所有 · All rights reserved.',
+      en: 'NOVAI Technology Services Co., Ltd. All rights reserved.',
     },
   },
 };
@@ -102,7 +102,7 @@ function headerHTML() {
   return `
   <header class="site-header" id="siteHeader">
     <div class="header-inner">
-      <a class="brand" href="index.html">AETHER</a>
+      <a class="brand" href="index.html">NOVAI</a>
       <nav class="main-nav">
         <ul>${navItems}</ul>
       </nav>
@@ -140,7 +140,7 @@ function footerHTML() {
     <div class="container">
       <div class="footer-top">
         <div class="footer-brand">
-          <a class="brand" href="index.html">AETHER</a>
+          <a class="brand" href="index.html">NOVAI</a>
           <p>${t(f.tagline)}</p>
           <div class="social">
             <a href="#" aria-label="WeChat">WX</a>
@@ -153,10 +153,10 @@ function footerHTML() {
         <div class="footer-col">
           <h5>${t(f.servicesH)}</h5>
           <ul>
-            <li><a href="cloud.html">${LANG === 'en' ? 'Aether Cloud' : 'Aether 云 · Cloud'}</a></li>
-            <li><a href="intelligence.html">${LANG === 'en' ? 'Aether Intelligence' : 'Aether 智能 · AI'}</a></li>
-            <li><a href="secure.html">${LANG === 'en' ? 'Aether Secure' : 'Aether 安全 · Secure'}</a></li>
-            <li><a href="build.html">${LANG === 'en' ? 'Aether Build' : 'Aether 开发 · Build'}</a></li>
+            <li><a href="cloud.html">${LANG === 'en' ? 'NOVAI Cloud' : 'NOVAI 云 · Cloud'}</a></li>
+            <li><a href="intelligence.html">${LANG === 'en' ? 'NOVAI Intelligence' : 'NOVAI 智能 · AI'}</a></li>
+            <li><a href="secure.html">${LANG === 'en' ? 'NOVAI Secure' : 'NOVAI 安全 · Secure'}</a></li>
+            <li><a href="build.html">${LANG === 'en' ? 'NOVAI Build' : 'NOVAI 开发 · Build'}</a></li>
             <li><a href="services.html">${t(f.allServices)}</a></li>
           </ul>
         </div>

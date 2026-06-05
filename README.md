@@ -1,6 +1,6 @@
-# AETHER 科技服务 — Tech Services Website
+# NOVAI 科技服务 — Tech Services Website
 
-一个多页、Lamborghini 风格的豪华企业站,内容为**科技服务公司 AETHER**(云 · AI · 安全 · 软件开发)。
+一个多页、Lamborghini 风格的豪华企业站,内容为**科技服务公司 NOVAI**(云 · AI · 安全 · 软件开发)。
 纯 **HTML / CSS / JavaScript**,无框架、无构建步骤,双语(中文为主 + 英文点缀),可深入点击,
 每个版块完善,并包含完整的法律条款页。
 
@@ -10,10 +10,10 @@
 |------|------|
 | 首页 Home | `index.html` |
 | 服务总览 Services | `services.html` |
-| Aether 云 Cloud | `cloud.html` |
-| Aether 智能 Intelligence | `intelligence.html` |
-| Aether 安全 Secure | `secure.html` |
-| Aether 开发 Build | `build.html` |
+| NOVAI 云 Cloud | `cloud.html` |
+| NOVAI 智能 Intelligence | `intelligence.html` |
+| NOVAI 安全 Secure | `secure.html` |
+| NOVAI 开发 Build | `build.html` |
 | 公司 Company | `company.html` |
 | 新闻 News | `news.html` |
 | 联系 Contact | `contact.html` |
@@ -48,5 +48,5 @@
 python3 -m http.server 8000   # 打开 http://localhost:8000
 ```
 
-> 设计与交互参考 lamborghini.com,内容从零重写。AETHER 为虚构公司,
+> 设计与交互参考 lamborghini.com,内容从零重写。NOVAI 为虚构公司,
 > 所有服务、价格与法律文本仅为示例,不构成法律意见。
