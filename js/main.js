@@ -1,16 +1,16 @@
 /* ============================================================
-   AETHER — shared header/footer injection + site interactions
+   AETHER 科技服务 — shared header/footer injection + interactions
    One file, included on every page with <script defer>.
    ============================================================ */
 
-const PRODUCTS = [
-  { href: 'halo.html', name: 'Aether Halo', tag: 'Smartphone' },
-  { href: 'forge.html', name: 'Aether Forge', tag: 'Workstation' },
-  { href: 'pulse.html', name: 'Aether Pulse', tag: 'Audio' },
-  { href: 'orbit.html', name: 'Aether Orbit', tag: 'Wearable' },
+const SERVICES = [
+  { href: 'cloud.html', name: 'Aether 云', en: 'Cloud', tag: '云基础设施' },
+  { href: 'intelligence.html', name: 'Aether 智能', en: 'Intelligence', tag: 'AI 与数据' },
+  { href: 'secure.html', name: 'Aether 安全', en: 'Secure', tag: '网络安全' },
+  { href: 'build.html', name: 'Aether 开发', en: 'Build', tag: '软件工程' },
 ];
 
-const MODEL_PAGES = ['models.html', ...PRODUCTS.map((p) => p.href)];
+const SERVICE_PAGES = ['services.html', ...SERVICES.map((s) => s.href)];
 
 function currentPage() {
   const path = window.location.pathname.split('/').pop();
@@ -20,18 +20,17 @@ function currentPage() {
 /* ---------- Header ---------- */
 function headerHTML() {
   const page = currentPage();
-  const isModels = MODEL_PAGES.includes(page);
+  const isServices = SERVICE_PAGES.includes(page);
 
-  const dropdown = PRODUCTS.map(
-    (p) =>
-      `<a href="${p.href}">${p.name}<span>${p.tag}</span></a>`
+  const dropdown = SERVICES.map(
+    (s) => `<a href="${s.href}">${s.name}<span>${s.en} · ${s.tag}</span></a>`
   ).join('');
 
   const navItems = [
-    { href: 'models.html', label: 'Models', active: isModels, dropdown },
-    { href: 'company.html', label: 'Company', active: page === 'company.html' },
-    { href: 'news.html', label: 'News', active: page === 'news.html' },
-    { href: 'contact.html', label: 'Contact', active: page === 'contact.html' },
+    { href: 'services.html', label: '服务', active: isServices, dropdown },
+    { href: 'company.html', label: '公司', active: page === 'company.html' },
+    { href: 'news.html', label: '新闻', active: page === 'news.html' },
+    { href: 'contact.html', label: '联系', active: page === 'contact.html' },
   ]
     .map((item) => {
       const cls = `${item.dropdown ? 'has-dropdown' : ''} ${
@@ -52,9 +51,9 @@ function headerHTML() {
         <ul>${navItems}</ul>
       </nav>
       <div class="header-actions">
-        <a class="mini" href="contact.html">Store</a>
-        <a class="mini" href="contact.html">Account</a>
-        <button class="hamburger" id="hamburger" type="button" aria-label="Menu">
+        <a class="mini" href="contact.html">客户门户</a>
+        <a class="mini" href="contact.html">预约咨询</a>
+        <button class="hamburger" id="hamburger" type="button" aria-label="菜单">
           <span></span><span></span><span></span>
         </button>
       </div>
@@ -63,14 +62,13 @@ function headerHTML() {
 
   <div class="overlay" id="overlay"></div>
   <nav class="mobile-nav" id="mobileNav">
-    <a href="index.html">Home</a>
-    <a href="models.html">Models</a>
-    ${PRODUCTS.map((p) => `<a class="sub" href="${p.href}">${p.name}</a>`).join('')}
-    <a href="company.html">Company</a>
-    <a href="news.html">News</a>
-    <a href="contact.html">Contact</a>
-    <a href="contact.html">Store</a>
-    <a href="contact.html">My Account</a>
+    <a href="index.html">首页 Home</a>
+    <a href="services.html">服务 Services</a>
+    ${SERVICES.map((s) => `<a class="sub" href="${s.href}">${s.name} · ${s.en}</a>`).join('')}
+    <a href="company.html">公司 Company</a>
+    <a href="news.html">新闻 News</a>
+    <a href="contact.html">联系 Contact</a>
+    <a href="contact.html">预约咨询</a>
   </nav>`;
 }
 
@@ -83,54 +81,54 @@ function footerHTML() {
       <div class="footer-top">
         <div class="footer-brand">
           <a class="brand" href="index.html">AETHER</a>
-          <p>Technology, elevated. Engineered without compromise, for those who refuse the ordinary.</p>
+          <p>科技服务，臻于卓越。从云到 AI、从安全到开发，为企业打造可靠的数字基座。</p>
           <div class="social">
-            <a href="#" aria-label="Instagram">IG</a>
+            <a href="#" aria-label="WeChat">WX</a>
+            <a href="#" aria-label="Weibo">WB</a>
+            <a href="#" aria-label="LinkedIn">IN</a>
             <a href="#" aria-label="YouTube">YT</a>
             <a href="#" aria-label="X">X</a>
-            <a href="#" aria-label="LinkedIn">IN</a>
-            <a href="#" aria-label="TikTok">TT</a>
           </div>
         </div>
         <div class="footer-col">
-          <h5>Products</h5>
+          <h5>服务 Services</h5>
           <ul>
-            <li><a href="halo.html">Aether Halo</a></li>
-            <li><a href="forge.html">Aether Forge</a></li>
-            <li><a href="pulse.html">Aether Pulse</a></li>
-            <li><a href="orbit.html">Aether Orbit</a></li>
-            <li><a href="models.html">All Models</a></li>
+            <li><a href="cloud.html">Aether 云 · Cloud</a></li>
+            <li><a href="intelligence.html">Aether 智能 · AI</a></li>
+            <li><a href="secure.html">Aether 安全 · Secure</a></li>
+            <li><a href="build.html">Aether 开发 · Build</a></li>
+            <li><a href="services.html">全部服务</a></li>
           </ul>
         </div>
         <div class="footer-col">
-          <h5>Company</h5>
+          <h5>公司 Company</h5>
           <ul>
-            <li><a href="company.html">About</a></li>
-            <li><a href="news.html">News</a></li>
-            <li><a href="company.html#careers">Careers</a></li>
-            <li><a href="contact.html">Contact</a></li>
-            <li><a href="company.html#sustainability">Sustainability</a></li>
+            <li><a href="company.html">关于我们</a></li>
+            <li><a href="news.html">新闻动态</a></li>
+            <li><a href="company.html#careers">加入我们</a></li>
+            <li><a href="contact.html">联系我们</a></li>
+            <li><a href="company.html#sustainability">可持续</a></li>
           </ul>
         </div>
         <div class="footer-col">
-          <h5>Legal</h5>
+          <h5>法律 Legal</h5>
           <ul>
-            <li><a href="privacy.html">Privacy Policy</a></li>
-            <li><a href="cookie.html">Cookie Policy</a></li>
-            <li><a href="terms.html">Terms &amp; Conditions</a></li>
-            <li><a href="legal.html">Legal Notice</a></li>
+            <li><a href="privacy.html">隐私政策</a></li>
+            <li><a href="cookie.html">Cookie 政策</a></li>
+            <li><a href="terms.html">服务条款</a></li>
+            <li><a href="legal.html">法律声明</a></li>
           </ul>
         </div>
       </div>
       <div class="footer-bottom">
         <div class="legal-links">
-          <a href="privacy.html">Privacy</a>
-          <a href="cookie.html">Cookies</a>
-          <a href="terms.html">Terms</a>
-          <a href="legal.html">Legal Notice</a>
-          <a href="contact.html">Accessibility</a>
+          <a href="privacy.html">隐私</a>
+          <a href="cookie.html">Cookie</a>
+          <a href="terms.html">条款</a>
+          <a href="legal.html">法律声明</a>
+          <a href="contact.html">无障碍</a>
         </div>
-        <div class="copyright">© ${year} AETHER Technologies S.p.A. All rights reserved.</div>
+        <div class="copyright">© ${year} AETHER 科技服务有限公司 版权所有 · All rights reserved.</div>
       </div>
     </div>
   </footer>`;
@@ -238,8 +236,7 @@ function initForms() {
       e.preventDefault();
       const msg = form.querySelector('[data-demo-msg]');
       if (msg) {
-        msg.textContent =
-          'Thank you — this is a demo form, so nothing was sent.';
+        msg.textContent = '感谢提交 — 这是演示表单，并未真正发送。';
         msg.style.color = 'var(--accent)';
       }
       form.reset();

@@ -464,6 +464,28 @@ h5 {
     linear-gradient(135deg, #0c0a05 0%, #1a150c 100%);
 }
 
+/* Service-themed backgrounds */
+.bg-cloud {
+  background: radial-gradient(circle at 72% 30%, rgba(90, 160, 255, 0.32), transparent 55%),
+    radial-gradient(circle at 16% 80%, rgba(60, 110, 220, 0.3), transparent 55%),
+    linear-gradient(135deg, #050911 0%, #0a1322 100%);
+}
+.bg-intelligence {
+  background: radial-gradient(circle at 72% 30%, rgba(170, 110, 255, 0.32), transparent 55%),
+    radial-gradient(circle at 16% 80%, rgba(120, 80, 230, 0.3), transparent 55%),
+    linear-gradient(135deg, #0a0613 0%, #150a26 100%);
+}
+.bg-secure {
+  background: radial-gradient(circle at 72% 30%, rgba(60, 220, 190, 0.3), transparent 55%),
+    radial-gradient(circle at 16% 80%, rgba(40, 170, 140, 0.28), transparent 55%),
+    linear-gradient(135deg, #04100e 0%, #07211d 100%);
+}
+.bg-build {
+  background: radial-gradient(circle at 72% 30%, rgba(255, 150, 80, 0.3), transparent 55%),
+    radial-gradient(circle at 16% 80%, rgba(230, 90, 70, 0.28), transparent 55%),
+    linear-gradient(135deg, #120806 0%, #1d0d0a 100%);
+}
+
 /* Page header (interior pages) */
 .page-header {
   position: relative;
