@@ -599,31 +599,7 @@ h5 {
   overflow-wrap: break-word;
 }
 
-/* ---------- Visual parity, not font-size parity ----------
-   English headings are UPPERCASE Latin (cap-height ≈ 0.7em), while CJK
-   glyphs fill the full em box, so at the same font-size Chinese looks
-   bigger/heavier. The base sizes above are tuned for English; here we
-   scale Chinese down (~0.82) so both languages read at the same visual
-   size, length and height. */
-html[lang='zh-CN'] .hero h1 {
-  font-size: clamp(26px, 3.8vw, 52px);
-}
-html[lang='zh-CN'] .page-header h1 {
-  font-size: clamp(24px, 4vw, 47px);
-}
-html[lang='zh-CN'] .section-head h2,
-html[lang='zh-CN'] .cta-band h2 {
-  font-size: clamp(21px, 3vw, 38px);
-}
-html[lang='zh-CN'] .feature-text h3 {
-  font-size: clamp(20px, 2.5vw, 31px);
-}
-html[lang='zh-CN'] .auth-visual .pitch h2 {
-  font-size: clamp(21px, 2.5vw, 33px);
-}
-html[lang='zh-CN'] .auth-card h1 {
-  font-size: 22px;
-}
+/* CN/EN headings use the same font-size (scale 1.00). */
 
 /* Hamburger */
 .hamburger {
