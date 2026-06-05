@@ -711,7 +711,7 @@ html[lang='zh-CN'] .hero h1 {
   min-height: 100vh;
   display: flex;
   align-items: flex-end;
-  padding-bottom: 90px;
+  padding-bottom: 160px;
   overflow: hidden;
 }
 .hero::after {
