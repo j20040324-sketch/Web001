@@ -10,6 +10,7 @@ const PRODUCT_PAGES = ['product.html', 'pricing.html'];
 
 const T = {
   nav: {
+    myflow: { zh: '我的工作流', en: 'My Flow' },
     product: { zh: '产品', en: 'Product' },
     pricing: { zh: '价格', en: 'Pricing' },
     company: { zh: '公司', en: 'Company' },
@@ -28,6 +29,7 @@ const T = {
     pricing: { zh: '价格 Pricing', en: 'Pricing' },
     company: { zh: '公司 Company', en: 'Company' },
     contact: { zh: '联系 Contact', en: 'Contact' },
+    myflow: { zh: '我的工作流 My Flow', en: 'My Flow' },
     account: { zh: '我的账户 My account', en: 'My account' },
     signin: { zh: '登录 Sign in', en: 'Sign in' },
     signout: { zh: '退出登录 Sign out', en: 'Sign out' },
@@ -83,23 +85,23 @@ function getUser() {
 /* ---------- Header ---------- */
 function headerHTML() {
   const page = currentPage();
+  const user = getUser();
 
-  const navItems = [
-    { href: 'product.html', label: t(T.nav.product), active: PRODUCT_PAGES.includes(page) && page === 'product.html' },
+  const navData = [
+    { href: 'product.html', label: t(T.nav.product), active: page === 'product.html' },
     { href: 'pricing.html', label: t(T.nav.pricing), active: page === 'pricing.html' },
     { href: 'company.html', label: t(T.nav.company), active: page === 'company.html' },
     { href: 'contact.html', label: t(T.nav.contact), active: page === 'contact.html' },
-  ]
-    .map((item) => {
-      const cls = `${item.dropdown ? 'has-dropdown' : ''} ${item.active ? 'active' : ''}`.trim();
-      const dd = item.dropdown ? `<div class="dropdown">${item.dropdown}</div>` : '';
-      return `<li class="${cls}"><a class="nav-link" href="${item.href}">${item.label}</a>${dd}</li>`;
-    })
+  ];
+  if (user) {
+    navData.unshift({ href: 'account.html', label: t(T.nav.myflow), active: page === 'account.html' });
+  }
+  const navItems = navData
+    .map((item) => `<li class="${item.active ? 'active' : ''}"><a class="nav-link" href="${item.href}">${item.label}</a></li>`)
     .join('');
 
   const toggleLabel = LANG === 'en' ? '中' : 'EN';
 
-  const user = getUser();
   const authMini = user
     ? `<a class="mini" href="#" data-action="signout">${t(T.mini.signout)}</a>
         <a class="mini" href="account.html">${t(T.mini.account)}</a>`
@@ -133,7 +135,8 @@ function headerHTML() {
     <a href="company.html">${t(T.mobile.company)}</a>
     <a href="contact.html">${t(T.mobile.contact)}</a>
     ${user
-      ? `<a href="account.html">${t(T.mobile.account)}</a>
+      ? `<a href="account.html">${t(T.mobile.myflow)}</a>
+    <a href="account.html">${t(T.mobile.account)}</a>
     <a href="#" data-action="signout">${t(T.mobile.signout)}</a>`
       : `<a href="login.html">${t(T.mobile.signin)}</a>
     <a href="login.html">${t(T.mobile.account)}</a>`}
