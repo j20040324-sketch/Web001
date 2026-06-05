@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-year="2026"
+  data-title-zh="登录 — NOVAI Flow"
+  data-title-en="Sign in — NOVAI Flow">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="登录 NOVAI Flow。" />
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="js/main.js" defer></script>
+    <script src="js/auth.js" defer></script>
+    <title>登录 — NOVAI Flow</title>
+  </head>
+  <body>
+    <div class="auth">
+      <!-- Brand panel -->
+      <aside class="auth-visual bg-home">
+        <a class="brand" href="index.html">NOVAI</a>
+        <div class="pitch">
+          <h2 data-en="Welcome<br />back">欢迎<br />回来</h2>
+          <p data-en="Sign in to keep your team’s work flowing — automations, runs and templates, right where you left them.">
+            登录后继续让团队的工作自动流动——你的自动化、运行记录与模板都在原处等你。
+          </p>
+        </div>
+        <p class="quote" data-en="“NOVAI Flow saves our team hours every week.”">“NOVAI Flow 每周为我们团队省下大量时间。”</p>
+      </aside>
+
+      <!-- Form -->
+      <main class="auth-main">
+        <div class="auth-card">
+          <div class="auth-top">
+            <a class="home-link" href="index.html" data-en="← Back to home">← 返回首页</a>
+            <a class="link-accent" href="signup.html" data-en="Sign up">注册</a>
+          </div>
+
+          <h1 data-en="Sign in">登录</h1>
+          <p class="auth-sub" data-en="Welcome back. Sign in to your NOVAI Flow account.">欢迎回来，登录你的 NOVAI Flow 账号。</p>
+
+          <div class="auth-msg" id="authMsg"></div>
+
+          <form id="loginForm" novalidate>
+            <div class="auth-field">
+              <label for="email" data-en="Email">邮箱</label>
+              <input id="email" name="email" type="email" autocomplete="email"
+                placeholder="you@company.com" data-en-placeholder="you@company.com" />
+              <p class="err" data-en="Please enter a valid email.">请输入有效的邮箱地址。</p>
+            </div>
+
+            <div class="auth-field">
+              <label for="password" data-en="Password">密码</label>
+              <div class="auth-pass">
+                <input id="password" name="password" type="password" autocomplete="current-password"
+                  placeholder="••••••••" />
+                <button type="button" class="toggle" data-toggle="password" data-en="Show">显示</button>
+              </div>
+              <p class="err" data-en="Please enter your password.">请输入密码。</p>
+            </div>
+
+            <div class="auth-row">
+              <label class="checkbox">
+                <input type="checkbox" id="remember" />
+                <span data-en="Remember me">记住我</span>
+              </label>
+              <a class="link-accent" href="#" data-en="Forgot password?">忘记密码？</a>
+            </div>
+
+            <button type="submit" class="btn btn-accent btn-full" data-en="Sign in">登录</button>
+          </form>
+
+          <div class="auth-divider" data-en="or">或</div>
+
+          <div class="auth-social">
+            <button type="button" class="social-btn" data-social="Google">Google</button>
+            <button type="button" class="social-btn" data-social="GitHub">GitHub</button>
+          </div>
+
+          <p class="auth-alt">
+            <span data-en="New to NOVAI Flow?">还没有账号？</span>
+            <a class="link-accent" href="signup.html" data-en="Create one free">免费注册</a>
+          </p>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

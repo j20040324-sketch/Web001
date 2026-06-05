@@ -96,8 +96,8 @@ function headerHTML() {
         <ul>${navItems}</ul>
       </nav>
       <div class="header-actions">
-        <a class="mini" href="contact.html">${t(T.mini.login)}</a>
-        <a class="mini" href="pricing.html">${t(T.mini.trial)}</a>
+        <a class="mini" href="login.html">${t(T.mini.login)}</a>
+        <a class="mini" href="signup.html">${t(T.mini.trial)}</a>
         <button class="lang-toggle" id="langToggle" type="button" aria-label="Switch language">${toggleLabel}</button>
         <button class="hamburger" id="hamburger" type="button" aria-label="Menu">
           <span></span><span></span><span></span>
@@ -115,7 +115,7 @@ function headerHTML() {
     <a href="pricing.html">${t(T.mobile.pricing)}</a>
     <a href="company.html">${t(T.mobile.company)}</a>
     <a href="contact.html">${t(T.mobile.contact)}</a>
-    <a href="contact.html">${t(T.mobile.trial)}</a>
+    <a href="signup.html">${t(T.mobile.trial)}</a>
   </nav>`;
 }
 
