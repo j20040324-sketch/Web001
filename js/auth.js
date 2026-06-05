@@ -93,7 +93,7 @@
       if (!ok) return;
       try { localStorage.setItem('novai-auth', email.value.trim()); } catch (e2) {}
       showMsg(tr('loginOk'));
-      setTimeout(() => { window.location.href = 'account.html'; }, 700);
+      setTimeout(() => { window.location.href = 'index.html'; }, 700);
     });
   }
 
@@ -116,7 +116,7 @@
       if (!ok) return;
       try { localStorage.setItem('novai-auth', email.value.trim()); } catch (e2) {}
       showMsg(tr('signupOk'));
-      setTimeout(() => { window.location.href = 'account.html'; }, 700);
+      setTimeout(() => { window.location.href = 'index.html'; }, 700);
     });
     const agree = document.getElementById('agree');
     if (agree) agree.addEventListener('change', () => document.getElementById('agreeField').classList.remove('show-err'));
