@@ -1049,6 +1049,44 @@ html[lang='zh-CN'] .hero h1 {
   margin-bottom: 28px;
 }
 
+/* Signed-in 'My Flow' quick-access block under the hero */
+.myflow-block {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+  padding: 30px 36px;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  background: rgba(201, 169, 106, 0.06);
+  transition: background 0.3s var(--ease), transform 0.3s var(--ease);
+}
+.myflow-block:hover {
+  background: rgba(201, 169, 106, 0.12);
+  transform: translateY(-2px);
+}
+.myflow-block h3 {
+  font-size: 24px;
+  text-transform: uppercase;
+  margin: 8px 0 6px;
+}
+.myflow-block p {
+  color: var(--muted);
+  font-weight: 300;
+}
+.myflow-block .btn {
+  flex: 0 0 auto;
+}
+@media (max-width: 640px) {
+  .myflow-block {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .myflow-block .btn {
+    width: 100%;
+  }
+}
+
 /* Newsletter */
 .newsletter-form {
   display: flex;
