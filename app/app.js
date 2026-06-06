@@ -1008,9 +1008,100 @@
     $$('#view [data-switch]').forEach(function (b) { b.onclick = async function () { try { var r = await API.post('/auth/switch', { companyId: b.dataset.switch }); localStorage.setItem('novai-access', r.accessToken); localStorage.setItem('novai-refresh', r.refreshToken); toast('已切换工作区'); location.reload(); } catch (e) { toast(e.message, true); } }; });
   }
 
+  // ---- Report builder (paperless reports) ----
+  var REPORT_STATUS = { DRAFT: '草稿', SENT: '已发送' };
+  function renderReportPreview(rep) {
+    var secs = (rep.sections || []).map(function (s) {
+      var items = (s.items || []).map(function (it) {
+        var v = it.value ? esc(it.value) : (it.checked ? '✓' : '');
+        return '<tr><td style="padding:6px;border-bottom:1px solid #eee">' + esc(it.label || '') + '</td><td style="padding:6px;border-bottom:1px solid #eee">' + v + (it.note ? ' — ' + esc(it.note) : '') + '</td></tr>';
+      }).join('');
+      return '<h3>' + esc(s.title || '') + '</h3><table style="width:100%;border-collapse:collapse">' + items + '</table>';
+    }).join('');
+    return '<h2>' + esc(rep.title) + '</h2>' + secs + (rep.aiDraft ? '<hr/><p><strong>AI 摘要</strong><br/>' + esc(rep.aiDraft) + '</p>' : '');
+  }
+  async function reportTemplatesModal() {
+    var t = await API.get('/report-templates').catch(function () { return { items: [] }; });
+    var list = (t.items || []).map(function (x) { return '<li style="padding:8px 0;border-bottom:1px solid var(--line-soft)">' + esc(x.name) + (x.description ? ' <span style="color:var(--muted)">· ' + esc(x.description) + '</span>' : '') + '</li>'; }).join('') || '<li class="d">暂无模板</li>';
+    openModal('报告模板', '<ul class="tl" style="margin-bottom:14px">' + list + '</ul><button class="b primary" id="newTpl">+ 新建模板</button>', {});
+    $('#newTpl').onclick = function () {
+      formModal('新建模板', [{ name: 'name', label: '模板名称' }, { name: 'description', label: '说明(可选)' }], '创建', async function (d) {
+        await API.post('/report-templates', { name: d.name, description: d.description, sections: [{ title: '概况', items: [{ label: '项目', type: 'text' }] }] });
+        closeModal(); toast('模板已创建');
+      });
+    };
+  }
+  async function viewReportDocs(parts) {
+    if (parts && parts[0]) return viewReportEditor(parts[0]);
+    loading();
+    var r = await API.get('/reports');
+    var rows = (r.items || []).map(function (x) {
+      return '<tr><td>' + esc(x.title) + '</td><td>' + badge(REPORT_STATUS[x.status] || x.status, x.status === 'SENT' ? 'green' : 'gold') + '</td><td>' + fmtDate(x.createdAt) + '</td><td><div class="rowacts"><button class="b sm" data-edit="' + x.id + '">编辑</button>' + (x.pdfUrl ? '<button class="b sm" data-dl="' + esc(x.pdfUrl) + '" data-name="' + esc(x.title) + '.html">下载</button>' : '') + '<button class="b sm danger" data-del="' + x.id + '">删</button></div></td></tr>';
+    }).join('');
+    var body = (r.items || []).length ? '<table class="tbl"><thead><tr><th>标题</th><th>状态</th><th>创建</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>' : emptyState('✎', '暂无报告', '用模板或空白创建一份无纸化报告，发送给客户。', 'add2', '+ 新建报告');
+    setView('<div class="pv-head"><div><h1>报告</h1><p>无纸化报告 / 检查报告</p></div><div style="display:flex;gap:8px"><button class="b" id="tpl">模板</button><button class="b primary" id="add">+ 新建报告</button></div></div><div class="panel">' + body + '</div>');
+    $$('#view [data-edit]').forEach(function (b) { b.onclick = function () { location.hash = '#/report/' + b.dataset.edit; }; });
+    $$('#view [data-del]').forEach(function (b) { b.onclick = function () { confirmDel('删除此报告？', async function () { await API.del('/reports/' + b.dataset.del); toast('已删除'); viewReportDocs(); }); }; });
+    $$('#view [data-dl]').forEach(function (b) { b.onclick = async function () { try { await API.download(b.dataset.dl, b.dataset.name); } catch (e) { toast(e.message, true); } }; });
+    $('#tpl').onclick = reportTemplatesModal;
+    var addFn = async function () {
+      var opts = await clientOptions();
+      var tpls = await API.get('/report-templates').catch(function () { return { items: [] }; });
+      var tplOpts = [['', '— 空白 —']].concat((tpls.items || []).map(function (t) { return [t.id, t.name]; }));
+      formModal('新建报告', [
+        { name: 'title', label: '标题' },
+        { name: 'clientId', label: '客户(可选)', type: 'select', options: [['', '—']].concat(opts) },
+        { name: 'templateId', label: '模板(可选)', type: 'select', options: tplOpts },
+      ], '创建', async function (d) {
+        var res = await API.post('/reports', clean(d)); closeModal(); location.hash = '#/report/' + res.id;
+      });
+    };
+    var a1 = $('#add'); if (a1) a1.onclick = addFn;
+    var a2 = $('#add2'); if (a2) a2.onclick = addFn;
+  }
+  async function viewReportEditor(id) {
+    loading();
+    var rep = await API.get('/reports/' + id);
+    rep.sections = Array.isArray(rep.sections) ? rep.sections : [];
+    function sync() {
+      $$('#repBody .rep-sec').forEach(function (sec) {
+        var si = +sec.getAttribute('data-si');
+        if (!rep.sections[si]) return;
+        rep.sections[si].title = $('.rs-title', sec).value;
+        rep.sections[si].items = $$('.ri-row', sec).map(function (row) {
+          return { label: $('.ri-label', row).value, value: $('.ri-value', row).value, note: $('.ri-note', row).value, checked: $('.ri-checked', row).checked };
+        });
+      });
+    }
+    function render() {
+      var secs = rep.sections.map(function (s, si) {
+        var items = (s.items || []).map(function (it) {
+          return '<div class="ri-row"><input class="ri-label" placeholder="项目" value="' + esc(it.label || '') + '"/><input class="ri-value" placeholder="结果" value="' + esc(it.value || '') + '"/><input class="ri-note" placeholder="备注" value="' + esc(it.note || '') + '"/><label class="ri-chk"><input type="checkbox" class="ri-checked"' + (it.checked ? ' checked' : '') + '/></label><button class="ri-del">✕</button></div>';
+        }).join('');
+        return '<div class="rep-sec" data-si="' + si + '"><div class="rep-sec-h"><input class="rs-title" placeholder="章节标题" value="' + esc(s.title || '') + '"/><button class="b sm danger rs-del">删章节</button></div>' + items + '<button class="b sm ri-add">+ 添加条目</button></div>';
+      }).join('');
+      $('#repBody').innerHTML = secs + '<button class="b" id="secAdd" style="margin-top:12px">+ 添加章节</button>';
+      $$('#repBody .rs-del').forEach(function (b) { b.onclick = function () { sync(); rep.sections.splice(+b.closest('.rep-sec').getAttribute('data-si'), 1); render(); }; });
+      $$('#repBody .ri-add').forEach(function (b) { b.onclick = function () { sync(); var si = +b.closest('.rep-sec').getAttribute('data-si'); rep.sections[si].items = rep.sections[si].items || []; rep.sections[si].items.push({ label: '', value: '', note: '', checked: false }); render(); }; });
+      $$('#repBody .ri-del').forEach(function (b) { b.onclick = function () { sync(); var row = b.closest('.ri-row'), sec = row.closest('.rep-sec'); var si = +sec.getAttribute('data-si'), ii = $$('.ri-row', sec).indexOf(row); rep.sections[si].items.splice(ii, 1); render(); }; });
+      $('#secAdd').onclick = function () { sync(); rep.sections.push({ title: '新章节', items: [] }); render(); };
+    }
+    setView(breadcrumb([{ label: '报告', href: '#/report' }, { label: rep.title }]) +
+      '<div class="pv-head"><div><h1>' + esc(rep.title) + '</h1><p>' + badge(REPORT_STATUS[rep.status] || rep.status, rep.status === 'SENT' ? 'green' : 'gold') + '</p></div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="b" id="ai">AI 摘要</button><button class="b" id="preview">预览</button><button class="b" id="save">保存</button><button class="b primary" id="send">发送给客户</button></div></div>' +
+      (rep.aiDraft ? '<div class="panel"><h3>AI 摘要</h3><p style="font-size:14px;color:var(--muted)">' + esc(rep.aiDraft) + '</p></div>' : '') +
+      '<div class="panel"><div class="field"><label>报告标题</label><input id="repTitle" value="' + esc(rep.title) + '"/></div><div id="repBody"></div></div>');
+    $('#repTitle').oninput = function (e) { rep.title = e.target.value; };
+    render();
+    $('#save').onclick = async function () { sync(); await API.patch('/reports/' + id, { title: rep.title, sections: rep.sections }); toast('已保存'); };
+    $('#ai').onclick = async function () { var res = await API.post('/reports/' + id + '/ai-draft-placeholder', {}); rep.aiDraft = res.aiDraft; toast('已生成 AI 摘要'); viewReportEditor(id); };
+    $('#send').onclick = async function () { sync(); await API.patch('/reports/' + id, { title: rep.title, sections: rep.sections }); await API.post('/reports/' + id + '/send', {}); toast('已发送给客户'); viewReportEditor(id); };
+    $('#preview').onclick = function () { sync(); openModal(rep.title, '<div style="background:#fff;color:#111;border-radius:8px;padding:16px;max-height:60vh;overflow:auto">' + renderReportPreview(rep) + '</div>', {}); };
+  }
+
   // ======================= shell + router =======================
-  var ROUTES = { dashboard: viewDashboard, clients: viewClients, tasks: viewTasks, projects: viewProjects, files: viewFiles, contracts: viewContracts, invoices: viewInvoices, messages: viewMessages, reports: viewReports, team: viewTeam, settings: viewSettings, account: viewAccount };
-  var TITLES = { dashboard: '仪表盘', clients: '客户', tasks: '任务', projects: '项目', files: '文件', contracts: '合同', invoices: '发票', messages: '消息', reports: '报表', team: '团队', settings: '设置', account: '个人信息' };
+  var ROUTES = { dashboard: viewDashboard, clients: viewClients, tasks: viewTasks, projects: viewProjects, files: viewFiles, contracts: viewContracts, invoices: viewInvoices, messages: viewMessages, report: viewReportDocs, reports: viewReports, team: viewTeam, settings: viewSettings, account: viewAccount };
+  var TITLES = { dashboard: '仪表盘', clients: '客户', tasks: '任务', projects: '项目', files: '文件', contracts: '合同', invoices: '发票', messages: '消息', report: '报告', reports: '报表', team: '团队', settings: '设置', account: '个人信息' };
 
   var currentKey = 'dashboard';
   function setActiveNav(key) {
