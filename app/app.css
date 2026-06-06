@@ -321,6 +321,20 @@
 .app-menu .ws .tick { color: var(--accent); }
 .app-menu .div { height: 1px; background: var(--line-soft); margin: 6px 4px; }
 
+/* Customizable dashboard grid */
+.dash-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; grid-auto-flow: row dense; align-items: start; }
+.dash-grid > .w-kpi { grid-column: span 1; }
+.dash-grid > .w-half { grid-column: span 2; }
+.dash-grid > .w-full { grid-column: span 4; }
+.dash-grid > * > .panel { margin-bottom: 0; }
+@media (max-width: 1100px) { .dash-grid > .w-kpi { grid-column: span 2; } .dash-grid > .w-half { grid-column: span 4; } }
+@media (max-width: 600px) { .dash-grid > * { grid-column: span 4 !important; } }
+.dc-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 4px; border-bottom: 1px solid var(--line-soft); font-size: 14px; }
+.dc-row:last-child { border-bottom: none; }
+.dc-row .dc-acts { display: flex; gap: 5px; }
+.dc-row button { background: none; border: 1px solid var(--line-soft); color: var(--fg); border-radius: 6px; padding: 4px 9px; font-size: 12px; cursor: pointer; }
+.dc-row button:hover { border-color: var(--accent); color: var(--accent); }
+
 /* Profile / account page */
 .profile-hd { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .profile-hd .av-lg { width: 56px; height: 56px; border-radius: 50%; background: var(--accent); color: #0a0a0b; display: grid; place-items: center; font-size: 24px; font-weight: 800; }

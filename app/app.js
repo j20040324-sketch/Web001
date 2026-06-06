@@ -176,6 +176,96 @@
   function focusItem(href, title, meta) { return '<a href="' + href + '"><span>' + esc(title) + '</span><span class="meta">' + esc(meta) + '</span></a>'; }
   function sumVals(o) { return Object.keys(o || {}).reduce(function (a, k) { return a + o[k]; }, 0); }
 
+  // ---- customizable dashboard ----
+  var DASH_CATALOG = [
+    { id: 'kpi_clients', title: '客户总数' }, { id: 'kpi_projects', title: '进行中项目' },
+    { id: 'kpi_overdue_tasks', title: '逾期任务' }, { id: 'kpi_unpaid', title: '待收发票' },
+    { id: 'kpi_new_clients', title: '今日新增客户' }, { id: 'kpi_unread', title: '未读消息' },
+    { id: 'kpi_unsigned', title: '未签合同' }, { id: 'kpi_due_today', title: '今日到期任务' },
+    { id: 'kpi_revenue_paid', title: '已收款' }, { id: 'kpi_revenue_out', title: '待收款' },
+    { id: 'kpi_sign_rate', title: '合同签署率' }, { id: 'kpi_task_completion', title: '任务完成率' },
+    { id: 'revenue', title: '收入概览（图）' }, { id: 'chart_clients', title: '客户分布（图）' },
+    { id: 'chart_invoices', title: '发票状态（图）' }, { id: 'chart_contracts', title: '合同状态（图）' },
+    { id: 'chart_projects', title: '项目状态（图）' }, { id: 'focus', title: '今日待办' },
+    { id: 'activity', title: '最近动态' },
+  ];
+  var DASH_DEFAULT = ['kpi_clients', 'kpi_projects', 'kpi_overdue_tasks', 'kpi_unpaid', 'revenue', 'chart_clients', 'focus', 'activity'];
+  function catTitle(id) { for (var i = 0; i < DASH_CATALOG.length; i++) if (DASH_CATALOG[i].id === id) return DASH_CATALOG[i].title; return id; }
+  function getDash() { try { var v = JSON.parse(localStorage.getItem('novai-dash') || 'null'); if (v && v.order && v.order.length) return v.order.filter(catTitleExists); } catch (e) {} return DASH_DEFAULT.slice(); }
+  function catTitleExists(id) { return DASH_CATALOG.some(function (w) { return w.id === id; }); }
+  function saveDash(order) { try { localStorage.setItem('novai-dash', JSON.stringify({ order: order })); } catch (e) {} }
+  function panelBars(title, arr) { return '<div class="panel"><h3>' + title + '</h3>' + (arr.length ? bars(arr) : '<p class="loading">暂无数据</p>') + '</div>'; }
+
+  function dashWidgets(ctx) {
+    var m = ctx.m, rep = ctx.rep;
+    var clientsTotal = rep ? sumVals(rep.clientsByStatus) : 0;
+    var taskCompletion = 0;
+    if (rep) { var tt = sumVals(rep.tasksByStatus); taskCompletion = tt ? Math.round((rep.tasksByStatus.DONE || 0) / tt * 100) : 0; }
+    function invSeg() { var inv = rep.invoicesByStatus; return [{ label: '已付', value: inv.PAID || 0, color: CHART.green }, { label: '未付', value: (inv.UNPAID || 0) + (inv.SENT || 0), color: CHART.gold }, { label: '逾期', value: inv.OVERDUE || 0, color: CHART.red }, { label: '草稿', value: (inv.DRAFT || 0) + (inv.CANCELLED || 0), color: CHART.gray }]; }
+    function clientBars() { var cb = rep.clientsByStatus; return CLIENT_STATUS.map(function (s) { return { label: s[1], value: cb[s[0]] || 0, color: CHART.gold }; }).filter(function (b) { return b.value > 0; }); }
+    function contractBars() { var ct = rep.contractsByStatus; return Object.keys(CONTRACT_LABEL).map(function (k) { return { label: CONTRACT_LABEL[k], value: ct[k] || 0, color: k === 'SIGNED' ? CHART.green : CHART.gold }; }).filter(function (b) { return b.value > 0; }); }
+    function projectBars() { var pj = rep.projectsByStatus; return PROJECT_STATUS.map(function (s) { return { label: s[1], value: pj[s[0]] || 0, color: s[0] === 'COMPLETED' ? CHART.green : CHART.gold }; }).filter(function (b) { return b.value > 0; }); }
+
+    var unsigned = (ctx.contracts.items || []).filter(function (c) { return c.status === 'SENT' || c.status === 'VIEWED'; }).slice(0, 5);
+    var unpaid = (ctx.invoices.items || []).filter(function (i) { return ['UNPAID', 'OVERDUE', 'SENT'].indexOf(i.status) > -1; }).slice(0, 5);
+    var focusHtml = '';
+    (ctx.overdue.items || []).slice(0, 5).forEach(function (t) { focusHtml += focusItem('#/tasks', t.title, '逾期任务 · ' + (t.dueDate ? fmtDay(t.dueDate) : '')); });
+    unsigned.forEach(function (c) { focusHtml += focusItem('#/contracts', c.title, '待签合同'); });
+    unpaid.forEach(function (i) { focusHtml += focusItem('#/invoices', i.invoiceNumber, money(i.amount) + ' · 待收款'); });
+    if (!focusHtml) focusHtml = '<p class="loading">没有待办事项，一切顺利。</p>';
+    var tl = (ctx.recent || []).map(function (e) { return '<li><div class="t">' + esc(e.title) + '</div><div class="d">' + fmtDate(e.createdAt) + (e.description ? ' · ' + esc(e.description) : '') + '</div></li>'; }).join('') || '<li class="d">暂无动态</li>';
+    var revHtml = rep ? ('<div class="panel"><h3>收入概览</h3><div style="display:flex;gap:24px;margin-bottom:16px"><div><div style="color:var(--muted);font-size:12px">已收</div><div style="font-family:Sora;font-size:22px;color:' + CHART.green + '">' + money(rep.revenue.paid) + '</div></div><div><div style="color:var(--muted);font-size:12px">待收</div><div style="font-family:Sora;font-size:22px;color:' + CHART.gold + '">' + money(rep.revenue.outstanding) + '</div></div></div>' + donut(invSeg()) + '</div>') : '';
+
+    return {
+      kpi_clients: { size: 'kpi', html: kpi('◍', clientsTotal, '客户总数') },
+      kpi_projects: { size: 'kpi', html: kpi('▤', m.activeProjects, '进行中项目') },
+      kpi_overdue_tasks: { size: 'kpi', html: kpi('⚠', m.tasksOverdue, '逾期任务', m.tasksOverdue > 0) },
+      kpi_unpaid: { size: 'kpi', html: kpi('$', m.unpaidInvoices + m.overdueInvoices, '待收发票', (m.unpaidInvoices + m.overdueInvoices) > 0) },
+      kpi_new_clients: { size: 'kpi', html: kpi('+', m.newClientsToday, '今日新增客户') },
+      kpi_unread: { size: 'kpi', html: kpi('✉', m.unreadMessages, '未读消息', m.unreadMessages > 0) },
+      kpi_unsigned: { size: 'kpi', html: kpi('✎', m.unsignedContracts, '未签合同') },
+      kpi_due_today: { size: 'kpi', html: kpi('◷', m.tasksDueToday, '今日到期任务', m.tasksDueToday > 0) },
+      kpi_revenue_paid: { size: 'kpi', html: rep ? kpi('$', money(rep.revenue.paid), '已收款') : '' },
+      kpi_revenue_out: { size: 'kpi', html: rep ? kpi('$', money(rep.revenue.outstanding), '待收款', rep.revenue.outstanding > 0) : '' },
+      kpi_sign_rate: { size: 'kpi', html: rep ? kpi('✎', rep.contractSignRate + '%', '合同签署率') : '' },
+      kpi_task_completion: { size: 'kpi', html: rep ? kpi('✓', taskCompletion + '%', '任务完成率') : '' },
+      revenue: { size: 'half', html: revHtml },
+      chart_clients: { size: 'half', html: rep ? panelBars('客户分布', clientBars()) : '' },
+      chart_invoices: { size: 'half', html: rep ? ('<div class="panel"><h3>发票状态</h3>' + donut(invSeg()) + '</div>') : '' },
+      chart_contracts: { size: 'half', html: rep ? panelBars('合同状态', contractBars()) : '' },
+      chart_projects: { size: 'half', html: rep ? panelBars('项目状态', projectBars()) : '' },
+      focus: { size: 'half', html: '<div class="panel"><h3>今日待办</h3><div class="focus">' + focusHtml + '</div></div>' },
+      activity: { size: 'half', html: '<div class="panel"><h3>最近动态</h3><ul class="tl">' + tl + '</ul></div>' },
+    };
+  }
+
+  function customizeDash() {
+    var order = getDash();
+    function render() {
+      var enabled = order.map(function (id) {
+        return '<div class="dc-row" data-id="' + id + '"><span>' + esc(catTitle(id)) + '</span><span class="dc-acts"><button data-up>↑</button><button data-down>↓</button><button data-rm>移除</button></span></div>';
+      }).join('') || '<p class="loading">没有启用的组件</p>';
+      var avail = DASH_CATALOG.filter(function (w) { return order.indexOf(w.id) < 0; }).map(function (w) {
+        return '<div class="dc-row" data-id="' + w.id + '"><span>' + esc(w.title) + '</span><button data-add>+ 添加</button></div>';
+      }).join('') || '<p class="loading">已全部添加</p>';
+      return '<div class="mh">已显示（可上下排序 / 移除）</div>' + enabled + '<div class="div"></div><div class="mh">可添加</div>' + avail;
+    }
+    openModal('自定义仪表盘', '<div id="dcBody">' + render() + '</div>', {
+      submitLabel: '保存', onSubmit: function () { saveDash(order); closeModal(); viewDashboard(); },
+    });
+    $('#dcBody').onclick = function (e) {
+      var btn = e.target.closest && e.target.closest('button'); if (!btn) return;
+      var row = btn.closest('.dc-row'); if (!row) return;
+      var id = row.getAttribute('data-id'), i = order.indexOf(id);
+      if (btn.hasAttribute('data-up') && i > 0) { order[i - 1] = order.splice(i, 1, order[i - 1])[0]; }
+      else if (btn.hasAttribute('data-down') && i > -1 && i < order.length - 1) { order[i + 1] = order.splice(i, 1, order[i + 1])[0]; }
+      else if (btn.hasAttribute('data-rm')) { order.splice(i, 1); }
+      else if (btn.hasAttribute('data-add')) { order.push(id); }
+      else return;
+      $('#dcBody').innerHTML = render();
+    };
+  }
+
   async function viewDashboard() {
     setView(skel(3) + skel(5));
     var res = await Promise.all([
@@ -185,55 +275,16 @@
       API.get('/contracts').catch(function () { return { items: [] }; }),
       API.get('/invoices').catch(function () { return { items: [] }; }),
     ]);
-    var d = res[0], rep = res[1], overdue = res[2], contracts = res[3], invoices = res[4];
-    var m = d.metrics;
-    var clientsTotal = rep ? sumVals(rep.clientsByStatus) : 0;
-
-    // ---- KPIs ----
-    var kpis = '<div class="kpi-grid">' +
-      kpi('◍', clientsTotal, '客户总数') +
-      kpi('▤', m.activeProjects, '进行中项目') +
-      kpi('⚠', m.tasksOverdue, '逾期任务', m.tasksOverdue > 0) +
-      kpi('$', m.unpaidInvoices + m.overdueInvoices, '待收发票', (m.unpaidInvoices + m.overdueInvoices) > 0) +
-      '</div>';
-
-    // ---- charts ----
-    var charts = '';
-    if (rep) {
-      var inv = rep.invoicesByStatus;
-      var invSeg = [
-        { label: '已付', value: inv.PAID || 0, color: CHART.green },
-        { label: '未付', value: (inv.UNPAID || 0) + (inv.SENT || 0), color: CHART.gold },
-        { label: '逾期', value: inv.OVERDUE || 0, color: CHART.red },
-        { label: '草稿', value: (inv.DRAFT || 0) + (inv.CANCELLED || 0), color: CHART.gray },
-      ];
-      var cb = rep.clientsByStatus;
-      var clientBars = CLIENT_STATUS.map(function (s) { return { label: s[1], value: cb[s[0]] || 0, color: CHART.gold }; }).filter(function (b) { return b.value > 0; });
-      charts = '<div class="grid2">' +
-        '<div class="panel"><h3>收入概览</h3>' +
-        '<div style="display:flex;gap:24px;margin-bottom:16px"><div><div class="l" style="color:var(--muted);font-size:12px">已收</div><div style="font-family:Sora;font-size:22px;color:' + CHART.green + '">' + money(rep.revenue.paid) + '</div></div>' +
-        '<div><div class="l" style="color:var(--muted);font-size:12px">待收</div><div style="font-family:Sora;font-size:22px;color:' + CHART.gold + '">' + money(rep.revenue.outstanding) + '</div></div></div>' +
-        donut(invSeg) + '</div>' +
-        '<div class="panel"><h3>客户分布</h3>' + (clientBars.length ? bars(clientBars) : '<p class="loading">暂无客户</p>') + '</div></div>';
-    }
-
-    // ---- today's focus ----
-    var unsigned = (contracts.items || []).filter(function (c) { return c.status === 'SENT' || c.status === 'VIEWED'; }).slice(0, 5);
-    var unpaid = (invoices.items || []).filter(function (i) { return ['UNPAID', 'OVERDUE', 'SENT'].indexOf(i.status) > -1; }).slice(0, 5);
-    var focus = '';
-    (overdue.items || []).slice(0, 5).forEach(function (t) { focus += focusItem('#/tasks', t.title, '逾期任务 · ' + (t.dueDate ? fmtDay(t.dueDate) : '')); });
-    unsigned.forEach(function (c) { focus += focusItem('#/contracts', c.title, '待签合同'); });
-    unpaid.forEach(function (i) { focus += focusItem('#/invoices', i.invoiceNumber, money(i.amount) + ' · 待收款'); });
-    if (!focus) focus = '<p class="loading">没有待办事项，一切顺利。</p>';
-
-    var tl = (d.recentActivity || []).map(function (e) {
-      return '<li><div class="t">' + esc(e.title) + '</div><div class="d">' + fmtDate(e.createdAt) + (e.description ? ' · ' + esc(e.description) : '') + '</div></li>';
-    }).join('') || '<li class="d">暂无动态</li>';
-
-    setView('<div class="pv-head"><div><h1>仪表盘</h1><p>今天需要关注的事项</p></div></div>' +
-      kpis + charts +
-      '<div class="grid2"><div class="panel"><h3>今日待办</h3><div class="focus">' + focus + '</div></div>' +
-      '<div class="panel"><h3>最近动态</h3><ul class="tl">' + tl + '</ul></div></div>');
+    var ctx = { m: res[0].metrics, rep: res[1], overdue: res[2], contracts: res[3], invoices: res[4], recent: res[0].recentActivity };
+    var widgets = dashWidgets(ctx);
+    var order = getDash().filter(function (id) { return widgets[id] && widgets[id].html; });
+    var grid = order.map(function (id) {
+      var w = widgets[id], cls = w.size === 'kpi' ? 'w-kpi' : (w.size === 'full' ? 'w-full' : 'w-half');
+      return '<div class="' + cls + '">' + w.html + '</div>';
+    }).join('') || '<p class="loading">没有可显示的组件，点「自定义」添加。</p>';
+    setView('<div class="pv-head"><div><h1>仪表盘</h1><p>今天需要关注的事项</p></div><button class="b" id="dashCustomize">自定义</button></div>' +
+      '<div class="dash-grid">' + grid + '</div>');
+    $('#dashCustomize').onclick = customizeDash;
   }
   function labelOfInvoice(s) { var m = { DRAFT: '草稿', SENT: '已发送', UNPAID: '未付', PAID: '已付', OVERDUE: '逾期', CANCELLED: '已取消' }; return m[s] || s; }
 
