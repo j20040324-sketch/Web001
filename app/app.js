@@ -266,7 +266,7 @@
     setView('<div class="pv-head"><div><h1>仪表盘</h1><p id="dashSub">今天需要关注的事项</p></div>' +
       '<div id="dashActions"><button class="b" id="dashCustomize">自定义</button></div></div>' +
       '<div class="dash-grid' + (dashState.editing ? ' editing' : '') + '" id="dashGrid">' + cells + '</div>');
-    $('#dashCustomize').onclick = enterEdit;
+    $('#dashCustomize').onclick = function (e) { e.stopPropagation(); enterEdit(); };
     bindDashGrid();
     $('#view').onclick = onDashBlankClick;
   }
@@ -290,15 +290,15 @@
     $('#dashGrid').classList.add('editing');
     $$('#dashGrid .dash-cell').forEach(function (c) { c.setAttribute('draggable', 'true'); });
     $('#dashActions').innerHTML = '<button class="b" id="dashAdd">+ 添加组件</button><button class="b primary" id="dashDone">完成</button>';
-    $('#dashAdd').onclick = openAddGallery;
-    $('#dashDone').onclick = exitEdit;
+    $('#dashAdd').onclick = function (e) { e.stopPropagation(); openAddGallery(); };
+    $('#dashDone').onclick = function (e) { e.stopPropagation(); exitEdit(); };
     $('#dashSub').textContent = '拖动排序 · 调尺寸 · 移除';
   }
   function exitEdit() {
     dashState.editing = false; closeSizePop();
     var grid = $('#dashGrid'); if (grid) { grid.classList.remove('editing'); $$('#dashGrid .dash-cell').forEach(function (c) { c.setAttribute('draggable', 'false'); }); }
     $('#dashActions').innerHTML = '<button class="b" id="dashCustomize">自定义</button>';
-    $('#dashCustomize').onclick = enterEdit;
+    $('#dashCustomize').onclick = function (e) { e.stopPropagation(); enterEdit(); };
     $('#dashSub').textContent = '今天需要关注的事项';
     saveDash();
   }
