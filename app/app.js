@@ -239,31 +239,68 @@
     };
   }
 
-  function customizeDash() {
-    var order = getDash();
-    function render() {
-      var enabled = order.map(function (id) {
-        return '<div class="dc-row" data-id="' + id + '"><span>' + esc(catTitle(id)) + '</span><span class="dc-acts"><button data-up>↑</button><button data-down>↓</button><button data-rm>移除</button></span></div>';
-      }).join('') || '<p class="loading">没有启用的组件</p>';
-      var avail = DASH_CATALOG.filter(function (w) { return order.indexOf(w.id) < 0; }).map(function (w) {
-        return '<div class="dc-row" data-id="' + w.id + '"><span>' + esc(w.title) + '</span><button data-add>+ 添加</button></div>';
-      }).join('') || '<p class="loading">已全部添加</p>';
-      return '<div class="mh">已显示（可上下排序 / 移除）</div>' + enabled + '<div class="div"></div><div class="mh">可添加</div>' + avail;
-    }
-    openModal('自定义仪表盘', '<div id="dcBody">' + render() + '</div>', {
-      submitLabel: '保存', onSubmit: function () { saveDash(order); closeModal(); viewDashboard(); },
+  // iOS home-screen–style editing: jiggle, drag to reorder, − to remove, + gallery to add.
+  var dashState = { widgets: null, order: null, editing: false };
+
+  function renderDash() {
+    var widgets = dashState.widgets, order = dashState.order, editing = dashState.editing;
+    var cells = order.filter(function (id) { return widgets[id] && widgets[id].html; }).map(function (id) {
+      var w = widgets[id], cls = w.size === 'kpi' ? 'w-kpi' : (w.size === 'full' ? 'w-full' : 'w-half');
+      return '<div class="dash-cell ' + cls + '" data-id="' + id + '"' + (editing ? ' draggable="true"' : '') + '>' +
+        (editing ? '<button class="rm-badge" data-rm title="移除">−</button>' : '') + w.html + '</div>';
+    }).join('') || '<p class="loading">没有组件，点「添加组件」。</p>';
+    var head = editing
+      ? '<div style="display:flex;gap:8px"><button class="b" id="dashAdd">+ 添加组件</button><button class="b primary" id="dashDone">完成</button></div>'
+      : '<button class="b" id="dashCustomize">自定义</button>';
+    setView('<div class="pv-head"><div><h1>仪表盘</h1><p>' + (editing ? '拖动排序 · 点 − 移除 · 添加组件' : '今天需要关注的事项') + '</p></div>' + head + '</div>' +
+      '<div class="dash-grid' + (editing ? ' editing' : '') + '" id="dashGrid">' + cells + '</div>');
+    bindDash();
+  }
+
+  function bindDash() {
+    var c = $('#dashCustomize'); if (c) c.onclick = function () { dashState.editing = true; renderDash(); };
+    var done = $('#dashDone'); if (done) done.onclick = function () { dashState.editing = false; saveDash(dashState.order); renderDash(); };
+    var add = $('#dashAdd'); if (add) add.onclick = openAddGallery;
+    $$('#dashGrid [data-rm]').forEach(function (b) {
+      b.onclick = function (e) {
+        e.stopPropagation();
+        var id = b.closest('.dash-cell').getAttribute('data-id'), i = dashState.order.indexOf(id);
+        if (i > -1) { dashState.order.splice(i, 1); saveDash(dashState.order); renderDash(); }
+      };
     });
-    $('#dcBody').onclick = function (e) {
-      var btn = e.target.closest && e.target.closest('button'); if (!btn) return;
-      var row = btn.closest('.dc-row'); if (!row) return;
-      var id = row.getAttribute('data-id'), i = order.indexOf(id);
-      if (btn.hasAttribute('data-up') && i > 0) { order[i - 1] = order.splice(i, 1, order[i - 1])[0]; }
-      else if (btn.hasAttribute('data-down') && i > -1 && i < order.length - 1) { order[i + 1] = order.splice(i, 1, order[i + 1])[0]; }
-      else if (btn.hasAttribute('data-rm')) { order.splice(i, 1); }
-      else if (btn.hasAttribute('data-add')) { order.push(id); }
-      else return;
-      $('#dcBody').innerHTML = render();
-    };
+    if (dashState.editing) wireDashDrag();
+  }
+
+  function wireDashDrag() {
+    var dragId = null;
+    $$('#dashGrid .dash-cell').forEach(function (cell) {
+      cell.ondragstart = function (e) { dragId = cell.getAttribute('data-id'); e.dataTransfer.effectAllowed = 'move'; cell.classList.add('dragging'); };
+      cell.ondragend = function () { cell.classList.remove('dragging'); };
+      cell.ondragover = function (e) { e.preventDefault(); };
+      cell.ondrop = function (e) {
+        e.preventDefault();
+        var targetId = cell.getAttribute('data-id');
+        if (!dragId || dragId === targetId) return;
+        var from = dashState.order.indexOf(dragId);
+        if (from < 0) return;
+        dashState.order.splice(from, 1);
+        var to = dashState.order.indexOf(targetId);
+        dashState.order.splice(to < 0 ? dashState.order.length : to, 0, dragId);
+        saveDash(dashState.order);
+        renderDash();
+      };
+    });
+  }
+
+  function openAddGallery() {
+    var avail = DASH_CATALOG.filter(function (w) { return dashState.order.indexOf(w.id) < 0; });
+    var body = avail.length
+      ? '<div class="add-gallery">' + avail.map(function (w) { return '<button class="add-card" data-id="' + w.id + '">' + esc(w.title) + '</button>'; }).join('') + '</div>'
+      : '<p class="loading">已全部添加</p>';
+    openModal('添加组件', body, {});
+    $$('#modalHost .add-card').forEach(function (b) {
+      b.onclick = function () { dashState.order.push(b.getAttribute('data-id')); saveDash(dashState.order); closeModal(); renderDash(); };
+    });
   }
 
   async function viewDashboard() {
@@ -276,15 +313,10 @@
       API.get('/invoices').catch(function () { return { items: [] }; }),
     ]);
     var ctx = { m: res[0].metrics, rep: res[1], overdue: res[2], contracts: res[3], invoices: res[4], recent: res[0].recentActivity };
-    var widgets = dashWidgets(ctx);
-    var order = getDash().filter(function (id) { return widgets[id] && widgets[id].html; });
-    var grid = order.map(function (id) {
-      var w = widgets[id], cls = w.size === 'kpi' ? 'w-kpi' : (w.size === 'full' ? 'w-full' : 'w-half');
-      return '<div class="' + cls + '">' + w.html + '</div>';
-    }).join('') || '<p class="loading">没有可显示的组件，点「自定义」添加。</p>';
-    setView('<div class="pv-head"><div><h1>仪表盘</h1><p>今天需要关注的事项</p></div><button class="b" id="dashCustomize">自定义</button></div>' +
-      '<div class="dash-grid">' + grid + '</div>');
-    $('#dashCustomize').onclick = customizeDash;
+    dashState.widgets = dashWidgets(ctx);
+    dashState.order = getDash().filter(function (id) { return dashState.widgets[id]; });
+    dashState.editing = false;
+    renderDash();
   }
   function labelOfInvoice(s) { var m = { DRAFT: '草稿', SENT: '已发送', UNPAID: '未付', PAID: '已付', OVERDUE: '逾期', CANCELLED: '已取消' }; return m[s] || s; }
 
