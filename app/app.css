@@ -37,7 +37,8 @@
   font-family: inherit; text-align: left; position: relative;
   transition: color 0.2s, background 0.2s;
 }
-.nav-item .i, .nav-grp-h .i { width: 18px; text-align: center; opacity: 0.85; }
+.nav-item .i, .nav-grp-h .i { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; opacity: 0.9; }
+.nav-item .i svg, .nav-grp-h .i svg { width: 18px; height: 18px; display: block; }
 .nav-item:hover, .nav-grp-h:hover { color: var(--fg); background: rgba(255, 255, 255, 0.045); }
 .nav-item.active { color: var(--accent); background: rgba(201, 169, 106, 0.12); }
 .nav-item.active::before { content: ''; position: absolute; left: 0; top: 7px; bottom: 7px; width: 3px; border-radius: 3px; background: var(--accent); }
@@ -72,7 +73,8 @@
 .app-burger { display: none; background: none; border: none; color: var(--fg); font-size: 20px; cursor: pointer; }
 .app-top-title { font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 600; }
 .app-top-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
-.app-bell { position: relative; background: none; border: none; color: var(--fg); font-size: 17px; cursor: pointer; }
+.app-bell { position: relative; background: none; border: none; color: var(--fg); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+.app-bell svg { width: 18px; height: 18px; display: block; }
 .app-bell-dot { position: absolute; top: -2px; right: -2px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
 .app-user { font-size: 13.5px; color: var(--muted); }
 .app-logout { background: none; border: 1px solid var(--line-soft); color: var(--fg); border-radius: 6px; padding: 7px 12px; font-size: 13px; cursor: pointer; }

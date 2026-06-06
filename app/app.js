@@ -237,10 +237,10 @@
     var unsigned = (contracts.items || []).filter(function (c) { return c.status === 'SENT' || c.status === 'VIEWED'; }).slice(0, 5);
     var unpaid = (invoices.items || []).filter(function (i) { return ['UNPAID', 'OVERDUE', 'SENT'].indexOf(i.status) > -1; }).slice(0, 5);
     var focus = '';
-    (overdue.items || []).slice(0, 5).forEach(function (t) { focus += focusItem('#/tasks', '🔴 ' + t.title, '逾期 · ' + (t.dueDate ? fmtDay(t.dueDate) : '')); });
-    unsigned.forEach(function (c) { focus += focusItem('#/contracts', '✎ ' + c.title, '待签署'); });
-    unpaid.forEach(function (i) { focus += focusItem('#/invoices', '$ ' + i.invoiceNumber, money(i.amount) + ' · ' + labelOfInvoice(i.status)); });
-    if (!focus) focus = '<p class="loading">没有待办事项，一切顺利 🎉</p>';
+    (overdue.items || []).slice(0, 5).forEach(function (t) { focus += focusItem('#/tasks', t.title, '逾期任务 · ' + (t.dueDate ? fmtDay(t.dueDate) : '')); });
+    unsigned.forEach(function (c) { focus += focusItem('#/contracts', c.title, '待签合同'); });
+    unpaid.forEach(function (i) { focus += focusItem('#/invoices', i.invoiceNumber, money(i.amount) + ' · 待收款'); });
+    if (!focus) focus = '<p class="loading">没有待办事项，一切顺利。</p>';
 
     var tl = (d.recentActivity || []).map(function (e) {
       return '<li><div class="t">' + esc(e.title) + '</div><div class="d">' + fmtDate(e.createdAt) + (e.description ? ' · ' + esc(e.description) : '') + '</div></li>';
@@ -946,10 +946,10 @@
       var cur = w.companyId === data.currentCompanyId;
       return '<button class="ws" data-switch="' + w.companyId + '"' + (cur ? ' disabled' : '') + '><span>' + esc(w.companyName) + ' · ' + esc(w.role) + '</span>' + (cur ? '<span class="tick">✓</span>' : '') + '</button>';
     }).join('');
-    menu.innerHTML = '<button data-act="profile">👤 个人信息</button><div class="div"></div>' +
+    menu.innerHTML = '<button data-act="profile">个人信息</button><div class="div"></div>' +
       '<div class="mh">工作区</div>' + (wsHtml || '<div class="loading" style="padding:6px 10px">无</div>') +
-      '<div class="div"></div><button data-act="email">✉ 更改邮箱</button><button data-act="password">🔑 更改密码</button>' +
-      '<div class="div"></div><button data-act="logout">⎋ 退出登录</button>';
+      '<div class="div"></div><button data-act="email">更改邮箱</button><button data-act="password">更改密码</button>' +
+      '<div class="div"></div><button data-act="logout">退出登录</button>';
     $('#appMenu [data-act="profile"]').onclick = function () { menu.hidden = true; location.hash = '#/account'; };
     $$('#appMenu [data-switch]').forEach(function (b) {
       b.onclick = async function () {
