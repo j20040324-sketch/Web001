@@ -286,6 +286,9 @@
 .ri-chk { display: grid; place-items: center; }
 .ri-del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 13px; }
 .ri-del:hover { color: #e0556a; }
+.ri-row2 { display: grid; grid-template-columns: 22px 1fr 24px; gap: 8px; align-items: center; margin-bottom: 6px; }
+.ri-row2 .ck-label, .ri-row2 .st-name { background: var(--bg-3); border: 1px solid var(--line-soft); color: var(--fg); border-radius: 6px; padding: 7px 9px; font-size: 13px; outline: none; width: 100%; }
+.ri-row2 input:focus { border-color: var(--accent); }
 
 /* segmented toggle */
 .seg { display: inline-flex; border: 1px solid var(--line-soft); border-radius: 7px; overflow: hidden; }

@@ -578,20 +578,40 @@
     $$('#view .board-card').forEach(function (card) { card.onclick = function () { var t = r.items.filter(function (x) { return x.id === card.dataset.id; })[0]; taskFormModal(t); }; });
     wireBoard(async function (id, status) { try { await API.patch('/tasks/' + id, { status: status }); toast('已更新'); tasksBoard(); } catch (e) { toast(e.message, true); } });
   }
-  function taskFormModal(task) {
+  async function taskFormModal(task) {
     var t = task || {};
-    formModal(task ? '编辑任务' : '新建任务', [
-      { name: 'title', label: '标题', value: t.title },
-      { name: 'description', label: '描述', type: 'textarea', value: t.description },
-      { name: 'status', label: '状态', type: 'select', options: TASK_STATUS, value: t.status || 'TODO' },
-      { name: 'priority', label: '优先级', type: 'select', options: PRIORITY, value: t.priority || 'MEDIUM' },
-      { name: 'dueDate', label: '截止日期', type: 'date', value: t.dueDate ? t.dueDate.slice(0, 10) : '' },
-    ], '保存', async function (d) {
-      var body = clean(d); if (body.dueDate) body.dueDate = new Date(body.dueDate).toISOString();
-      if (task) await API.patch('/tasks/' + task.id, body);
-      else await API.post('/tasks', body);
-      closeModal(); toast('已保存'); viewTasks();
+    var checklist = Array.isArray(t.checklist) ? t.checklist.map(function (c) { return { label: c.label || '', done: !!c.done }; }) : [];
+    var opts = await clientOptions();
+    function ckHtml() {
+      return checklist.map(function (c, i) {
+        return '<div class="ri-row2" data-i="' + i + '"><input type="checkbox" class="ck-done"' + (c.done ? ' checked' : '') + '/><input class="ck-label" value="' + esc(c.label) + '" placeholder="清单项"/><button type="button" class="ri-del ck-del">✕</button></div>';
+      }).join('');
+    }
+    var body = fieldHtml({ name: 'title', label: '标题', value: t.title }) +
+      fieldHtml({ name: 'description', label: '描述', type: 'textarea', value: t.description }) +
+      '<div class="row2">' + fieldHtml({ name: 'status', label: '状态', type: 'select', options: TASK_STATUS, value: t.status || 'TODO' }) + fieldHtml({ name: 'priority', label: '优先级', type: 'select', options: PRIORITY, value: t.priority || 'MEDIUM' }) + '</div>' +
+      fieldHtml({ name: 'dueDate', label: '截止日期', type: 'date', value: t.dueDate ? t.dueDate.slice(0, 10) : '' }) +
+      fieldHtml({ name: 'clientId', label: '关联客户(可选)', type: 'select', options: [['', '—']].concat(opts), value: t.clientId || '' }) +
+      '<div class="field"><label>清单</label><div id="ckList">' + ckHtml() + '</div><button type="button" class="b sm" id="ckAdd" style="margin-top:6px">+ 添加清单项</button></div>';
+    openModal(task ? '编辑任务' : '新建任务', body, {
+      submitLabel: '保存',
+      onSubmit: async function (host) {
+        syncCk(host);
+        var d = collect(host);
+        // strip checklist inputs that collect picked up by name? they have no name, fine
+        var bd = clean({ title: d.title, description: d.description, status: d.status, priority: d.priority, dueDate: d.dueDate, clientId: d.clientId });
+        if (bd.dueDate) bd.dueDate = new Date(bd.dueDate).toISOString();
+        bd.checklist = checklist.filter(function (c) { return c.label; });
+        var btn = $('[data-ms]', host); if (btn) btn.disabled = true;
+        try { if (task) await API.patch('/tasks/' + task.id, bd); else await API.post('/tasks', bd); closeModal(); toast('已保存'); viewTasks(); }
+        catch (e) { toast(e.message, true); if (btn) btn.disabled = false; }
+      },
     });
+    var host = $('#modalHost');
+    function syncCk(h) { checklist = $$('#ckList .ri-row2', h).map(function (row) { return { label: $('.ck-label', row).value, done: $('.ck-done', row).checked }; }); }
+    function bindCk() { $$('#ckList .ck-del', host).forEach(function (b) { b.onclick = function () { syncCk(host); checklist.splice(+b.closest('.ri-row2').getAttribute('data-i'), 1); $('#ckList', host).innerHTML = ckHtml(); bindCk(); }; }); }
+    bindCk();
+    $('#ckAdd', host).onclick = function () { syncCk(host); checklist.push({ label: '', done: false }); $('#ckList', host).innerHTML = ckHtml(); bindCk(); };
   }
   async function viewTasks() {
     if (fTasks.view === 'board') return tasksBoard();
@@ -606,7 +626,8 @@
     } else {
       var rows = r.items.map(function (t) {
         var done = t.status === 'DONE';
-        return '<tr><td>' + esc(t.title) + '</td><td>' + badge(labelOf(TASK_STATUS, t.status), done ? 'green' : '') + '</td><td>' + badge(labelOf(PRIORITY, t.priority), t.priority === 'URGENT' || t.priority === 'HIGH' ? 'red' : '') + '</td><td>' + (t.dueDate ? fmtDay(t.dueDate) : '-') + '</td><td><div class="rowacts">' +
+        var ck = Array.isArray(t.checklist) && t.checklist.length ? ' <span class="badge">☑ ' + t.checklist.filter(function (c) { return c.done; }).length + '/' + t.checklist.length + '</span>' : '';
+        return '<tr><td>' + esc(t.title) + ck + '</td><td>' + badge(labelOf(TASK_STATUS, t.status), done ? 'green' : '') + '</td><td>' + badge(labelOf(PRIORITY, t.priority), t.priority === 'URGENT' || t.priority === 'HIGH' ? 'red' : '') + '</td><td>' + (t.dueDate ? fmtDay(t.dueDate) : '-') + '</td><td><div class="rowacts">' +
           (done ? '' : '<button class="b sm" data-done="' + t.id + '">完成</button>') +
           '<button class="b sm" data-edit="' + t.id + '">编辑</button><button class="b sm danger" data-del="' + t.id + '">删</button></div></td></tr>';
       }).join('') || '<tr><td class="empty" colspan="5">没有匹配的任务</td></tr>';
@@ -649,7 +670,8 @@
       await API.patch('/projects/' + p.id, body); closeModal(); toast('已保存'); viewProjects();
     });
   }
-  async function viewProjects() {
+  async function viewProjects(parts) {
+    if (parts && parts[0]) return viewProjectDetail(parts[0]);
     loading();
     var r = await API.get('/projects?page=' + fProjects.page + '&pageSize=15');
     var body;
@@ -657,15 +679,47 @@
       body = emptyState('▤', '暂无项目', '把客户的工作拆成项目来推进。', 'add', '+ 新建项目');
     } else {
       var rows = r.items.map(function (p) {
-        return '<tr><td>' + esc(p.projectName) + '</td><td>' + badge(labelOf(PROJECT_STATUS, p.status), p.status === 'COMPLETED' ? 'green' : 'gold') + '</td><td>' + (p.dueDate ? fmtDay(p.dueDate) : '-') + '</td><td><div class="rowacts"><button class="b sm" data-edit="' + p.id + '">编辑</button><button class="b sm danger" data-del="' + p.id + '">删</button></div></td></tr>';
+        return '<tr class="clickable" data-id="' + p.id + '"><td>' + esc(p.projectName) + '</td><td>' + badge(labelOf(PROJECT_STATUS, p.status), p.status === 'COMPLETED' ? 'green' : 'gold') + '</td><td>' + (p.dueDate ? fmtDay(p.dueDate) : '-') + '</td><td><div class="rowacts"><button class="b sm" data-edit="' + p.id + '">编辑</button><button class="b sm danger" data-del="' + p.id + '">删</button></div></td></tr>';
       }).join('');
       body = '<table class="tbl"><thead><tr><th>名称</th><th>状态</th><th>截止</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>' + pagerHtml(r.total, r.page, r.pageSize);
     }
     setView('<div class="pv-head"><div><h1>项目</h1><p>共 ' + r.total + ' 个</p></div><button class="b primary" id="add">+ 新建项目</button></div><div class="panel">' + body + '</div>');
     var addBtn = $('#add'); if (addBtn) addBtn.onclick = projectCreateModal;
-    $$('#view [data-edit]').forEach(function (b) { b.onclick = function () { projectEditModal(r.items.filter(function (x) { return x.id === b.dataset.edit; })[0]); }; });
-    $$('#view [data-del]').forEach(function (b) { b.onclick = function () { confirmDel('删除此项目？', async function () { await API.del('/projects/' + b.dataset.del); toast('已删除'); viewProjects(); }); }; });
+    $$('#view tr.clickable').forEach(function (tr) { tr.onclick = function () { location.hash = '#/projects/' + tr.dataset.id; }; });
+    $$('#view [data-edit]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); projectEditModal(r.items.filter(function (x) { return x.id === b.dataset.edit; })[0]); }; });
+    $$('#view [data-del]').forEach(function (b) { b.onclick = function (e) { e.stopPropagation(); confirmDel('删除此项目？', async function () { await API.del('/projects/' + b.dataset.del); toast('已删除'); viewProjects(); }); }; });
     bindPager(function (p) { fProjects.page = p; viewProjects(); });
+  }
+
+  async function viewProjectDetail(id) {
+    loading();
+    var p = await API.get('/projects/' + id);
+    var stages = Array.isArray(p.stages) ? p.stages.map(function (s) { return { name: s.name || '', done: !!s.done }; }) : [];
+    var updates = p.updates || [];
+    function stageHtml() {
+      return stages.map(function (s, i) {
+        return '<div class="ri-row2" data-i="' + i + '"><input type="checkbox" class="st-done"' + (s.done ? ' checked' : '') + '/><input class="st-name" value="' + esc(s.name) + '" placeholder="阶段名"/><button type="button" class="ri-del st-del">✕</button></div>';
+      }).join('');
+    }
+    var updatesHtml = updates.map(function (u) {
+      return '<li><div class="t">' + esc(u.body) + '</div><div class="d">' + fmtDate(u.createdAt) + (u.isClientVisible ? ' · ' + badge('客户可见', 'green') : ' · ' + badge('仅内部')) + '</div></li>';
+    }).join('') || '<li class="d">暂无更新</li>';
+    var done = stages.filter(function (s) { return s.done; }).length;
+    setView(
+      breadcrumb([{ label: '项目', href: '#/projects' }, { label: p.projectName }]) +
+      '<div class="pv-head"><div><h1>' + esc(p.projectName) + '</h1><p>' + badge(labelOf(PROJECT_STATUS, p.status), p.status === 'COMPLETED' ? 'green' : 'gold') + (p.dueDate ? ' · 截止 ' + fmtDay(p.dueDate) : '') + '</p></div>' +
+      '<div style="display:flex;gap:8px"><button class="b" id="pedit">编辑</button><button class="b" id="ptoggle">' + (p.isClientVisible ? '设为仅内部' : '设为客户可见') + '</button></div></div>' +
+      '<div class="detail"><div class="panel"><h3>进度更新</h3><form class="chat-form" id="puForm" style="margin-bottom:14px"><input id="puBody" placeholder="写一条进度更新…" autocomplete="off"/><button class="b primary" type="submit">发布</button></form><ul class="tl">' + updatesHtml + '</ul></div>' +
+      '<div class="panel"><h3>阶段（' + done + '/' + stages.length + '）</h3><div id="stList">' + stageHtml() + '</div><button class="b sm" id="stAdd" style="margin-top:8px">+ 添加阶段</button><button class="b sm primary" id="stSave" style="margin-top:8px;margin-left:6px">保存阶段</button>' +
+      '<div style="margin-top:14px"><dl class="kv"><dt>描述</dt><dd>' + esc(p.description || '-') + '</dd><dt>客户可见</dt><dd>' + (p.isClientVisible ? '是' : '否') + '</dd></dl></div></div></div>');
+    $('#pedit').onclick = function () { projectEditModal(p); };
+    $('#ptoggle').onclick = async function () { await API.patch('/projects/' + id, { isClientVisible: !p.isClientVisible }); toast('已更新'); viewProjectDetail(id); };
+    $('#puForm').onsubmit = async function (e) { e.preventDefault(); var v = $('#puBody').value.trim(); if (!v) return; await API.post('/projects/' + id + '/updates', { body: v }); toast('已发布'); viewProjectDetail(id); };
+    function syncSt() { stages = $$('#stList .ri-row2').map(function (row) { return { name: $('.st-name', row).value, done: $('.st-done', row).checked }; }); }
+    function bindSt() { $$('#stList .st-del').forEach(function (b) { b.onclick = function () { syncSt(); stages.splice(+b.closest('.ri-row2').getAttribute('data-i'), 1); $('#stList').innerHTML = stageHtml(); bindSt(); }; }); }
+    bindSt();
+    $('#stAdd').onclick = function () { syncSt(); stages.push({ name: '', done: false }); $('#stList').innerHTML = stageHtml(); bindSt(); };
+    $('#stSave').onclick = async function () { syncSt(); await API.patch('/projects/' + id, { stages: stages.filter(function (s) { return s.name; }) }); toast('阶段已保存'); };
   }
 
   async function viewContracts() {
