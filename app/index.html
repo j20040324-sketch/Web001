@@ -14,17 +14,39 @@
       <aside class="app-side">
         <a class="app-brand" href="#/dashboard">NOVAI <span>Flow</span></a>
         <nav class="app-nav" id="appNav">
-          <a href="#/dashboard" data-nav="dashboard"><span class="i">▦</span> 仪表盘</a>
-          <a href="#/clients" data-nav="clients"><span class="i">◍</span> 客户</a>
-          <a href="#/tasks" data-nav="tasks"><span class="i">✓</span> 任务</a>
-          <a href="#/projects" data-nav="projects"><span class="i">▤</span> 项目</a>
-          <a href="#/files" data-nav="files"><span class="i">📎</span> 文件</a>
-          <a href="#/contracts" data-nav="contracts"><span class="i">✎</span> 合同</a>
-          <a href="#/invoices" data-nav="invoices"><span class="i">$</span> 发票</a>
-          <a href="#/messages" data-nav="messages"><span class="i">✉</span> 消息</a>
-          <a href="#/reports" data-nav="reports"><span class="i">▣</span> 报表</a>
-          <a href="#/team" data-nav="team"><span class="i">◎</span> 团队</a>
-          <a href="#/settings" data-nav="settings"><span class="i">⚙</span> 设置</a>
+          <div class="nav-bookmarks" id="navBookmarks"></div>
+
+          <div class="nav-sec">概览</div>
+          <a class="nav-item" href="#/dashboard" data-nav="dashboard"><span class="i">▦</span> 仪表盘</a>
+
+          <div class="nav-sec">业务</div>
+          <div class="nav-group" data-group="ops">
+            <button class="nav-grp-h" type="button"><span class="i">◍</span> 运营 <span class="chev">›</span></button>
+            <div class="nav-sub">
+              <a href="#/clients" data-nav="clients">客户</a>
+              <a href="#/tasks" data-nav="tasks">任务</a>
+              <a href="#/projects" data-nav="projects">项目</a>
+              <a href="#/messages" data-nav="messages">消息</a>
+            </div>
+          </div>
+          <div class="nav-group" data-group="biz">
+            <button class="nav-grp-h" type="button"><span class="i">▤</span> 财务与文档 <span class="chev">›</span></button>
+            <div class="nav-sub">
+              <a href="#/contracts" data-nav="contracts">合同</a>
+              <a href="#/invoices" data-nav="invoices">发票</a>
+              <a href="#/files" data-nav="files">文件</a>
+            </div>
+          </div>
+          <a class="nav-item" href="#/reports" data-nav="reports"><span class="i">▣</span> 报表</a>
+
+          <div class="nav-sec">管理</div>
+          <div class="nav-group" data-group="manage">
+            <button class="nav-grp-h" type="button"><span class="i">⚙</span> 团队与设置 <span class="chev">›</span></button>
+            <div class="nav-sub">
+              <a href="#/team" data-nav="team">团队</a>
+              <a href="#/settings" data-nav="settings">设置</a>
+            </div>
+          </div>
         </nav>
         <div class="app-side-foot">
           <a href="../index.html" class="app-side-link">← 返回官网</a>
@@ -40,9 +62,12 @@
             <div class="app-search-res" id="searchRes" hidden></div>
           </div>
           <div class="app-top-right">
+            <button class="app-bookmark" id="appBookmark" title="收藏此页">☆</button>
             <button class="app-bell" id="appBell" title="通知">🔔<span class="app-bell-dot" id="bellDot" hidden></span></button>
-            <div class="app-user" id="appUser"></div>
-            <button class="app-logout" id="appLogout">退出</button>
+            <div class="app-account">
+              <button class="app-account-btn" id="appAccountBtn"><span class="av" id="appAv">N</span><span id="appUser"></span><span class="cv">▾</span></button>
+              <div class="app-menu" id="appMenu" hidden></div>
+            </div>
           </div>
         </header>
         <main class="app-view" id="view"></main>

@@ -849,9 +849,75 @@
   var ROUTES = { dashboard: viewDashboard, clients: viewClients, tasks: viewTasks, projects: viewProjects, files: viewFiles, contracts: viewContracts, invoices: viewInvoices, messages: viewMessages, reports: viewReports, team: viewTeam, settings: viewSettings };
   var TITLES = { dashboard: '仪表盘', clients: '客户', tasks: '任务', projects: '项目', files: '文件', contracts: '合同', invoices: '发票', messages: '消息', reports: '报表', team: '团队', settings: '设置' };
 
+  var currentKey = 'dashboard';
   function setActiveNav(key) {
-    $$('#appNav a').forEach(function (a) { a.classList.toggle('active', a.getAttribute('data-nav') === key); });
+    currentKey = key;
+    $$('#appNav [data-nav]').forEach(function (a) { a.classList.toggle('active', a.getAttribute('data-nav') === key); });
+    var leaf = $('#appNav [data-nav="' + key + '"]');
+    if (leaf) { var grp = leaf.closest('.nav-group'); if (grp) grp.classList.add('open'); }
     $('#appTitle').textContent = TITLES[key] || 'NOVAI Flow';
+    renderBookmarkStar();
+  }
+
+  // ---- bookmarks ----
+  function getBookmarks() { try { return JSON.parse(localStorage.getItem('novai-bookmarks') || '[]'); } catch (e) { return []; } }
+  function setBookmarks(b) { try { localStorage.setItem('novai-bookmarks', JSON.stringify(b)); } catch (e) {} }
+  function isBookmarked(key) { return getBookmarks().some(function (x) { return x.key === key; }); }
+  function renderBookmarks() {
+    var b = getBookmarks(), host = $('#navBookmarks'); if (!host) return;
+    host.innerHTML = b.length ? '<div class="nav-sec">书签</div>' + b.map(function (x) { return '<a href="#/' + x.key + '"><span class="i">★</span>' + esc(x.label) + '</a>'; }).join('') : '';
+  }
+  function renderBookmarkStar() { var btn = $('#appBookmark'); if (!btn) return; var on = isBookmarked(currentKey); btn.textContent = on ? '★' : '☆'; btn.classList.toggle('on', on); }
+  function toggleBookmark() {
+    var b = getBookmarks();
+    b = isBookmarked(currentKey) ? b.filter(function (x) { return x.key !== currentKey; }) : b.concat([{ key: currentKey, label: TITLES[currentKey] || currentKey }]);
+    setBookmarks(b); renderBookmarks(); renderBookmarkStar();
+    toast(isBookmarked(currentKey) ? '已收藏' : '已取消收藏');
+  }
+
+  // ---- account menu ----
+  function changePasswordModal() {
+    formModal('更改密码', [
+      { name: 'currentPassword', label: '当前密码', type: 'password' },
+      { name: 'newPassword', label: '新密码（至少 8 位）', type: 'password' },
+    ], '保存', async function (d) {
+      var r = await API.post('/auth/change-password', { currentPassword: d.currentPassword, newPassword: d.newPassword });
+      if (r && r.accessToken) { localStorage.setItem('novai-access', r.accessToken); localStorage.setItem('novai-refresh', r.refreshToken); }
+      closeModal(); toast('密码已更新');
+    });
+  }
+  function changeEmailModal() {
+    formModal('更改邮箱', [
+      { name: 'newEmail', label: '新邮箱', type: 'email' },
+      { name: 'password', label: '当前密码', type: 'password' },
+    ], '保存', async function (d) {
+      var r = await API.post('/auth/change-email', { newEmail: d.newEmail, password: d.password });
+      try { localStorage.setItem('novai-auth', d.newEmail); } catch (e) {}
+      closeModal();
+      openModal('邮箱已更新', '<p style="font-size:14px;color:var(--muted);margin-bottom:10px">新邮箱需验证。验证链接（暂未发真邮件，先返回给你）：</p><div class="field"><input value="' + esc(r.verifyUrl) + '" readonly/></div>', { submitLabel: '复制', onSubmit: function () { copy(r.verifyUrl); } });
+    });
+  }
+  async function openAccountMenu() {
+    var menu = $('#appMenu');
+    if (!menu.hidden) { menu.hidden = true; return; }
+    menu.innerHTML = '<div class="loading" style="padding:14px">加载中…</div>';
+    menu.hidden = false;
+    var data = await API.get('/auth/memberships').catch(function () { return { items: [], currentCompanyId: '' }; });
+    var wsHtml = (data.items || []).map(function (w) {
+      var cur = w.companyId === data.currentCompanyId;
+      return '<button class="ws" data-switch="' + w.companyId + '"' + (cur ? ' disabled' : '') + '><span>' + esc(w.companyName) + ' · ' + esc(w.role) + '</span>' + (cur ? '<span class="tick">✓</span>' : '') + '</button>';
+    }).join('');
+    menu.innerHTML = '<div class="mh">工作区</div>' + (wsHtml || '<div class="loading" style="padding:6px 10px">无</div>') +
+      '<div class="div"></div><button data-act="email">✉ 更改邮箱</button><button data-act="password">🔑 更改密码</button>' +
+      '<div class="div"></div><button data-act="logout">⎋ 退出登录</button>';
+    $$('#appMenu [data-switch]').forEach(function (b) {
+      b.onclick = async function () {
+        try { var r = await API.post('/auth/switch', { companyId: b.dataset.switch }); localStorage.setItem('novai-access', r.accessToken); localStorage.setItem('novai-refresh', r.refreshToken); toast('已切换工作区'); location.reload(); } catch (e) { toast(e.message, true); }
+      };
+    });
+    $('#appMenu [data-act="logout"]').onclick = function () { API.logout(); };
+    $('#appMenu [data-act="email"]').onclick = function () { menu.hidden = true; changeEmailModal(); };
+    $('#appMenu [data-act="password"]').onclick = function () { menu.hidden = true; changePasswordModal(); };
   }
   function closeSide() { $('.app-side').classList.remove('open'); $('#appOverlay').classList.remove('show'); }
 
@@ -884,10 +950,18 @@
     try {
       var me = await API.get('/auth/me');
       $('#appUser').textContent = (me.user.firstName || '') + (me.company ? ' · ' + me.company.name : '');
+      $('#appAv').textContent = ((me.user.firstName || me.user.email || 'N').trim()[0] || 'N').toUpperCase();
     } catch (e) { if (e && e.status === 401) return; }
-    $('#appLogout').onclick = function () { API.logout(); };
     $('#appBurger').onclick = function () { $('.app-side').classList.add('open'); $('#appOverlay').classList.add('show'); };
     $('#appOverlay').onclick = closeSide;
+
+    // grouped nav: collapse/expand groups
+    $$('#appNav .nav-grp-h').forEach(function (h) { h.onclick = function () { h.parentNode.classList.toggle('open'); }; });
+    // bookmarks + account menu
+    renderBookmarks();
+    $('#appBookmark').onclick = toggleBookmark;
+    $('#appAccountBtn').onclick = function (e) { e.stopPropagation(); openAccountMenu(); };
+    document.addEventListener('click', function (e) { var m = $('#appMenu'), btn = $('#appAccountBtn'); if (m && !m.hidden && !m.contains(e.target) && !btn.contains(e.target)) m.hidden = true; });
     $('#appBell').onclick = async function () {
       var n = await API.get('/notifications');
       var list = (n.items || []).map(function (x) { return '<li><div class="t">' + esc(x.title) + '</div><div class="d">' + esc(x.message || '') + ' · ' + fmtDate(x.createdAt) + '</div></li>'; }).join('') || '<li class="d">暂无通知</li>';
