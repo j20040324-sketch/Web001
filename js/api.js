@@ -5,7 +5,7 @@
    e.g. var API_BASE = 'https://novai-backend.onrender.com';
    ============================================================ */
 (function () {
-  var API_BASE = ''; // <-- paste your Render backend URL here
+  var API_BASE = 'https://novai-backend.onrender.com'; // Render backend
   var PREFIX = '/api/v1';
 
   function url(p) {
