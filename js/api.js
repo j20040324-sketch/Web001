@@ -44,7 +44,7 @@
         await new Promise(function (r) { setTimeout(r, 3000); });
         return jsonFetch(path, opts, left - 1);
       }
-      var ne = new Error('服务器唤醒超时，请稍等 1 分钟后再试一次。');
+      var ne = new Error('无法连接到服务器。请新开标签页访问 https://novai-backend.onrender.com/health ：能看到 {"status":"ok"} 说明是浏览器缓存，请用无痕窗口重试；打不开说明你当前网络访问不了该服务器。');
       ne.network = true;
       throw ne;
     }
