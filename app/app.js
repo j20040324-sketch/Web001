@@ -943,39 +943,61 @@
     };
   }
 
+  var ROLES_DESC = [
+    ['OWNER', '所有者', '最高权限，管理一切'],
+    ['ADMIN', '管理员', '公司设置、成员、客户、合同、发票、集成、报表'],
+    ['MANAGER', '经理', '团队客户、任务、项目、合同、发票'],
+    ['STAFF', '员工', '分配给自己的客户、任务、消息、合同、发票、文件'],
+    ['CLIENT', '客户', '只能访问自己的门户数据'],
+  ];
+  function prefRow(label, key, on) { return '<label class="pref-row"><span>' + label + '</span><input type="checkbox" data-pref="' + key + '"' + (on ? ' checked' : '') + '/></label>'; }
   async function viewSettings() {
     loading();
     var co = await API.get('/companies/current');
     var pay = await API.get('/payment-settings').catch(function () { return {}; });
     var wf = await API.get('/workflows').catch(function () { return { items: [] }; });
     var integ = await API.get('/integrations').catch(function () { return { items: [] }; });
+    var prefs = await API.get('/notification-preferences').catch(function () { return { inAppEnabled: true, emailEnabled: true, smsEnabled: false }; });
     var wfRows = (wf.items || []).map(function (w) {
       return '<tr><td>' + esc(w.name) + '</td><td><button class="b sm" data-wf="' + w.id + '" data-on="' + w.isActive + '">' + (w.isActive ? '已启用' : '已停用') + '</button></td></tr>';
     }).join('');
+    var roleRows = ROLES_DESC.map(function (r) { return '<tr><td>' + badge(r[1], 'gold') + '</td><td style="color:var(--muted);font-size:13px">' + esc(r[2]) + '</td></tr>'; }).join('');
+    var connected = (integ.items || []).filter(function (i) { return i.status === 'CONNECTED' || i.status === 'MOCK_CONNECTED'; }).length;
     setView('<div class="pv-head"><div><h1>设置</h1></div></div>' +
       '<div class="grid2">' +
-      '<div class="panel"><h3>公司资料</h3>' +
+      '<div class="panel"><h3>公司资料 / 品牌</h3>' +
       fieldHtml({ name: 'name', label: '公司名称', value: co.name }) +
       fieldHtml({ name: 'abn', label: 'ABN', value: co.abn }) +
-      fieldHtml({ name: 'phone', label: '电话', value: co.phone }) +
-      fieldHtml({ name: 'email', label: '邮箱', value: co.email }) +
-      '<button class="b primary" id="saveCo">保存公司资料</button></div>' +
+      '<div class="row2">' + fieldHtml({ name: 'phone', label: '电话', value: co.phone }) + fieldHtml({ name: 'email', label: '邮箱', value: co.email }) + '</div>' +
+      fieldHtml({ name: 'logoUrl', label: 'Logo 链接', value: co.logoUrl }) +
+      fieldHtml({ name: 'timezone', label: '时区', value: co.timezone }) +
+      '<button class="b primary" id="saveCo">保存</button></div>' +
       '<div class="panel"><h3>收款设置</h3>' +
       fieldHtml({ name: 'accountName', label: '账户名', value: pay.accountName }) +
-      fieldHtml({ name: 'bsb', label: 'BSB', value: pay.bsb }) +
-      fieldHtml({ name: 'accountNumber', label: '账号', value: pay.accountNumber }) +
-      '<button class="b primary" id="savePay">保存收款设置</button></div>' +
+      '<div class="row2">' + fieldHtml({ name: 'bsb', label: 'BSB', value: pay.bsb }) + fieldHtml({ name: 'accountNumber', label: '账号', value: pay.accountNumber }) + '</div>' +
+      '<button class="b primary" id="savePay">保存</button></div>' +
+      '</div>' +
+      '<div class="grid2">' +
+      '<div class="panel"><h3>通知偏好</h3><div class="prefs">' + prefRow('应用内通知', 'inAppEnabled', prefs.inAppEnabled) + prefRow('邮件通知（占位）', 'emailEnabled', prefs.emailEnabled) + prefRow('短信通知（占位）', 'smsEnabled', prefs.smsEnabled) + '</div></div>' +
+      '<div class="panel"><h3>安全</h3><div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start"><button class="b" id="chPwd">更改密码</button><button class="b" id="chEmail">更改邮箱</button></div></div>' +
+      '</div>' +
+      '<div class="grid2">' +
+      '<div class="panel"><h3>角色与权限</h3><table class="tbl"><tbody>' + roleRows + '</tbody></table></div>' +
+      '<div class="panel"><h3>API 密钥</h3><p style="color:var(--muted);font-size:13px;margin-bottom:10px">用于程序化访问 NovAI API。</p><button class="b" disabled style="opacity:.5">生成密钥（即将上线）</button></div>' +
       '</div>' +
       '<div class="panel"><h3>自动化工作流</h3><table class="tbl"><tbody>' + (wfRows || '<tr><td class="empty">—</td></tr>') + '</tbody></table></div>' +
-      '<div class="panel"><h3>集成</h3><p style="color:var(--muted);font-size:13px">已连接 ' + (integ.items || []).filter(function (i) { return i.status === 'CONNECTED'; }).length + ' 个 · 共 12 个可接入（结构已就绪，真实对接稍后开通）</p></div>');
+      '<div class="panel"><h3>集成</h3><p style="color:var(--muted);font-size:13px">已连接 ' + connected + ' 个 · 共 16 个可接入。<a class="link-accent" href="#/integrations">前往集成市场 →</a></p></div>');
     $('#saveCo').onclick = async function () {
-      var body = clean({ name: $('[name=name]').value, abn: $('[name=abn]').value, phone: $('[name=phone]').value, email: $('[name=email]').value });
+      var body = clean({ name: $('[name=name]').value, abn: $('[name=abn]').value, phone: $('[name=phone]').value, email: $('[name=email]').value, logoUrl: $('[name=logoUrl]').value, timezone: $('[name=timezone]').value });
       try { await API.patch('/companies/current', body); toast('已保存'); } catch (e) { toast(e.message, true); }
     };
     $('#savePay').onclick = async function () {
       var body = clean({ accountName: $('[name=accountName]').value, bsb: $('[name=bsb]').value, accountNumber: $('[name=accountNumber]').value });
       try { await API.patch('/payment-settings', body); toast('已保存'); } catch (e) { toast(e.message, true); }
     };
+    $('#chPwd').onclick = changePasswordModal;
+    $('#chEmail').onclick = changeEmailModal;
+    $$('#view [data-pref]').forEach(function (cb) { cb.onchange = async function () { var d = {}; d[cb.dataset.pref] = cb.checked; try { await API.patch('/notification-preferences', d); toast('已更新'); } catch (e) { toast(e.message, true); } }; });
     $$('#view [data-wf]').forEach(function (b) {
       b.onclick = async function () {
         var to = b.dataset.on !== 'true';
@@ -1237,6 +1259,29 @@
     $$('#view [data-del]').forEach(function (b) { b.onclick = function () { confirmDel('删除此公告？', async function () { await API.del('/announcements/' + b.dataset.del); toast('已删除'); viewAnnouncements(); }); }; });
   }
 
+  // ---- Email module (mock) ----
+  async function viewEmail() {
+    loading();
+    var res = await Promise.all([
+      API.get('/mailboxes').catch(function () { return { items: [] }; }),
+      API.get('/emails').catch(function () { return { items: [] }; }),
+      API.get('/email-templates').catch(function () { return { items: [] }; }),
+    ]);
+    var mb = res[0].items || [], em = (res[1].items) || [], tpls = res[2].items || [];
+    var mbRows = mb.map(function (m) { return '<tr><td>' + esc(m.emailAddress) + '</td><td>' + badge(m.provider) + '</td><td>' + badge(m.syncStatus || '待授权', m.syncStatus === 'SYNCED' ? 'green' : '') + '</td><td><div class="rowacts"><button class="b sm" data-sync="' + m.id + '">模拟同步</button><button class="b sm danger" data-mdel="' + m.id + '">删</button></div></td></tr>'; }).join('') || '<tr><td class="empty" colspan="4">未连接邮箱</td></tr>';
+    var emRows = em.map(function (e) { return '<tr><td>' + badge(e.direction === 'INBOUND' ? '收' : '发', e.direction === 'INBOUND' ? 'blue' : 'gold') + '</td><td>' + esc(e.subject || '(无主题)') + '</td><td>' + esc(e.direction === 'INBOUND' ? e.fromEmail : e.toEmail) + '</td><td>' + fmtDate(e.createdAt) + '</td></tr>'; }).join('') || '<tr><td class="empty" colspan="4">暂无邮件</td></tr>';
+    var tplRows = tpls.map(function (t) { return '<tr><td>' + esc(t.name) + '</td><td>' + esc(t.subject) + '</td><td><button class="b sm danger" data-tdel="' + t.id + '">删</button></td></tr>'; }).join('') || '<tr><td class="empty" colspan="3">暂无模板</td></tr>';
+    setView('<div class="pv-head"><div><h1>邮箱</h1><p>邮件集成（模拟，未接入真实 Gmail/Outlook）</p></div><div style="display:flex;gap:8px"><button class="b" data-conn="GMAIL">连接 Gmail</button><button class="b" data-conn="OUTLOOK">连接 Outlook</button></div></div>' +
+      '<div class="panel"><h3>邮箱（最多 2 个）</h3><table class="tbl"><thead><tr><th>地址</th><th>提供商</th><th>状态</th><th></th></tr></thead><tbody>' + mbRows + '</tbody></table></div>' +
+      '<div class="panel"><h3>邮件</h3><table class="tbl"><thead><tr><th>方向</th><th>主题</th><th>对方</th><th>时间</th></tr></thead><tbody>' + emRows + '</tbody></table></div>' +
+      '<div class="panel"><h3>邮件模板 <button class="b sm" id="addTpl" style="float:right">+ 新建模板</button></h3><table class="tbl"><thead><tr><th>名称</th><th>主题</th><th></th></tr></thead><tbody>' + tplRows + '</tbody></table></div>');
+    $$('#view [data-conn]').forEach(function (b) { b.onclick = function () { var prov = b.dataset.conn; formModal('连接 ' + prov + '（模拟）', [{ name: 'emailAddress', label: '邮箱地址', type: 'email' }, { name: 'displayName', label: '显示名称(可选)' }], '连接', async function (d) { await API.post('/mailboxes/connect', { provider: prov, emailAddress: d.emailAddress, displayName: d.displayName }); closeModal(); toast('已连接（模拟）'); viewEmail(); }); }; });
+    $$('#view [data-sync]').forEach(function (b) { b.onclick = async function () { var r = await API.post('/mailboxes/' + b.dataset.sync + '/mock-sync', {}); toast('已同步 ' + (r.synced || 0) + ' 封'); viewEmail(); }; });
+    $$('#view [data-mdel]').forEach(function (b) { b.onclick = function () { confirmDel('删除此邮箱？', async function () { await API.del('/mailboxes/' + b.dataset.mdel); toast('已删除'); viewEmail(); }); }; });
+    $$('#view [data-tdel]').forEach(function (b) { b.onclick = function () { confirmDel('删除此模板？', async function () { await API.del('/email-templates/' + b.dataset.tdel); toast('已删除'); viewEmail(); }); }; });
+    $('#addTpl').onclick = function () { formModal('新建邮件模板', [{ name: 'name', label: '模板名称' }, { name: 'subject', label: '邮件主题' }, { name: 'bodyHtml', label: '内容(HTML，支持 {{client_name}} 等)', type: 'textarea' }], '创建', async function (d) { await API.post('/email-templates', d); closeModal(); toast('已创建'); viewEmail(); }); };
+  }
+
   // ======================= CLIENT PORTAL =======================
   function dl(pdfUrl, name) { return pdfUrl ? '<button class="b sm" data-pdl="' + esc(pdfUrl) + '" data-pn="' + esc(name) + '">下载</button>' : ''; }
   function bindPortalDownloads() { $$('#view [data-pdl]').forEach(function (b) { b.onclick = async function () { try { await API.download(b.dataset.pdl, b.dataset.pn); } catch (e) { toast(e.message, true); } }; }); }
@@ -1331,8 +1376,8 @@
   }
 
   // ======================= shell + router =======================
-  var ROUTES = { dashboard: viewDashboard, clients: viewClients, tasks: viewTasks, projects: viewProjects, files: viewFiles, contracts: viewContracts, invoices: viewInvoices, messages: viewMessages, report: viewReportDocs, reports: viewReports, automations: viewAutomations, integrations: viewIntegrations, announcements: viewAnnouncements, team: viewTeam, settings: viewSettings, account: viewAccount };
-  var TITLES = { dashboard: '仪表盘', clients: '客户', tasks: '任务', projects: '项目', files: '文件', contracts: '合同', invoices: '发票', messages: '消息', report: '报告', reports: '报表', automations: '自动化', integrations: '集成', announcements: '公告', team: '团队', settings: '设置', account: '个人信息' };
+  var ROUTES = { dashboard: viewDashboard, clients: viewClients, tasks: viewTasks, projects: viewProjects, files: viewFiles, contracts: viewContracts, invoices: viewInvoices, messages: viewMessages, report: viewReportDocs, reports: viewReports, automations: viewAutomations, integrations: viewIntegrations, announcements: viewAnnouncements, email: viewEmail, team: viewTeam, settings: viewSettings, account: viewAccount };
+  var TITLES = { dashboard: '仪表盘', clients: '客户', tasks: '任务', projects: '项目', files: '文件', contracts: '合同', invoices: '发票', messages: '消息', report: '报告', reports: '报表', automations: '自动化', integrations: '集成', announcements: '公告', email: '邮箱', team: '团队', settings: '设置', account: '个人信息' };
 
   var currentKey = 'dashboard';
   function setActiveNav(key) {

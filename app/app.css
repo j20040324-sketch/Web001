@@ -388,6 +388,11 @@
 .int-cat { color: var(--muted); font-size: 12px; margin-top: 2px; }
 .int-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 
+/* Notification preference rows */
+.prefs { display: flex; flex-direction: column; }
+.pref-row { display: flex; align-items: center; justify-content: space-between; padding: 11px 4px; border-bottom: 1px solid var(--line-soft); font-size: 14px; cursor: pointer; }
+.pref-row:last-child { border-bottom: none; }
+
 /* ===== Premium iOS-style dashboard cards ===== */
 .dash-cell > .panel,
 .dash-cell > .kpi {
