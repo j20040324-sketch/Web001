@@ -630,8 +630,15 @@
     function find(id) { return items.filter(function (x) { return x.id === id; })[0]; }
     $$('#view [data-detail]').forEach(function (b) { b.onclick = function () {
       var i = find(b.dataset.detail);
-      openModal('发票 ' + i.invoiceNumber, '<dl class="kv">' +
-        '<dt>金额</dt><dd>' + esc(i.currency) + ' ' + esc(i.amount) + '</dd>' +
+      var liBlock;
+      if (Array.isArray(i.lineItems) && i.lineItems.length) {
+        liBlock = '<table class="tbl" style="margin-bottom:10px"><thead><tr><th>描述</th><th style="text-align:right">数量</th><th style="text-align:right">单价</th><th style="text-align:right">金额</th></tr></thead><tbody>' +
+          i.lineItems.map(function (x) { return '<tr><td>' + esc(x.description) + '</td><td style="text-align:right">' + x.quantity + '</td><td style="text-align:right">' + money(x.unitPrice) + '</td><td style="text-align:right">' + money(x.lineTotal) + '</td></tr>'; }).join('') +
+          '</tbody></table><dl class="kv"><dt>小计</dt><dd>' + money(i.subtotal) + '</dd><dt>GST(' + Number(i.taxRate || 0) + '%)</dt><dd>' + money(i.taxAmount) + '</dd><dt>合计</dt><dd><strong>' + money(i.amount) + '</strong></dd></dl>';
+      } else {
+        liBlock = '<dl class="kv"><dt>金额</dt><dd>' + money(i.amount) + '</dd></dl>';
+      }
+      openModal('发票 ' + i.invoiceNumber, liBlock + '<dl class="kv">' +
         '<dt>状态</dt><dd>' + badge(i.status, i.status === 'PAID' ? 'green' : 'gold') + '</dd>' +
         '<dt>到期</dt><dd>' + (i.dueDate ? fmtDay(i.dueDate) : '-') + '</dd>' +
         '<dt>账户名</dt><dd>' + esc(i.bankAccountName || '-') + '</dd>' +
@@ -642,19 +649,58 @@
     $$('#view [data-dl]').forEach(function (b) { b.onclick = async function () { try { await API.download(b.dataset.dl, b.dataset.name); } catch (e) { toast(e.message, true); } }; });
     $$('#view [data-send]').forEach(function (b) { b.onclick = async function () { await API.post('/invoices/' + b.dataset.send + '/send', {}); toast('已发送'); viewInvoices(); }; });
     $$('#view [data-paid]').forEach(function (b) { b.onclick = async function () { await API.post('/invoices/' + b.dataset.paid + '/mark-paid', {}); toast('已标记已付'); viewInvoices(); }; });
-    $('#add').onclick = async function () {
-      var opts = await clientOptions();
-      if (!opts.length) { toast('请先创建客户', true); return; }
-      formModal('新建发票', [
-        { name: 'clientId', label: '客户', type: 'select', options: opts },
-        { name: 'amount', label: '金额', type: 'number' },
-        { name: 'dueDate', label: '到期日期', type: 'date' },
-      ], '创建', async function (d) {
-        var body = { clientId: d.clientId, amount: parseFloat(d.amount) };
-        if (d.dueDate) body.dueDate = new Date(d.dueDate).toISOString();
-        await API.post('/invoices', body); closeModal(); toast('发票已创建'); viewInvoices();
+    $('#add').onclick = invoiceModal;
+  }
+  async function invoiceModal() {
+    var opts = await clientOptions();
+    if (!opts.length) { toast('请先创建客户', true); return; }
+    var rows = [{ description: '', quantity: 1, unitPrice: 0 }];
+    var gst = true;
+    function totals() {
+      var sub = rows.reduce(function (a, r) { return a + (Number(r.quantity) || 0) * (Number(r.unitPrice) || 0); }, 0);
+      var tax = gst ? sub * 0.1 : 0;
+      return { sub: sub, tax: tax, total: sub + tax };
+    }
+    function liHtml() {
+      return rows.map(function (r, i) {
+        return '<div class="li-row" data-i="' + i + '"><input class="li-desc" placeholder="描述" value="' + esc(r.description) + '"/><input class="li-qty" type="number" min="0" step="1" value="' + r.quantity + '"/><input class="li-price" type="number" min="0" step="0.01" value="' + r.unitPrice + '"/><span class="li-total">' + money((Number(r.quantity) || 0) * (Number(r.unitPrice) || 0)) + '</span><button type="button" class="li-del">✕</button></div>';
+      }).join('');
+    }
+    function totalsHtml() { var t = totals(); return '小计 ' + money(t.sub) + ' · GST ' + money(t.tax) + ' · <strong>合计 ' + money(t.total) + '</strong>'; }
+    var body = '<div class="field"><label>客户</label><select name="clientId">' + opts.map(function (o) { return '<option value="' + o[0] + '">' + esc(o[1]) + '</option>'; }).join('') + '</select></div>' +
+      '<div class="li-head"><span>描述</span><span>数量</span><span>单价</span><span style="text-align:right">金额</span><span></span></div>' +
+      '<div id="liList">' + liHtml() + '</div>' +
+      '<button type="button" class="b sm" id="liAdd" style="margin:6px 0 12px">+ 添加明细</button>' +
+      '<div class="field"><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="gst" checked style="width:auto"/> 含 GST (10%)</label></div>' +
+      '<div class="field"><label>到期日期</label><input name="dueDate" type="date"/></div>' +
+      '<div id="liTotals" style="text-align:right;font-size:14px;margin-top:4px">' + totalsHtml() + '</div>';
+    openModal('新建发票', body, {
+      submitLabel: '创建',
+      onSubmit: async function (host) {
+        sync(host);
+        var items = rows.filter(function (r) { return r.description && Number(r.quantity) > 0; }).map(function (r) { return { description: r.description, quantity: Number(r.quantity), unitPrice: Number(r.unitPrice) || 0 }; });
+        if (!items.length) { toast('请至少填写一条明细', true); return; }
+        var b = { clientId: $('select[name=clientId]', host).value, lineItems: items, taxRate: gst ? 10 : 0 };
+        var due = $('input[name=dueDate]', host).value; if (due) b.dueDate = new Date(due).toISOString();
+        var btn = $('[data-ms]', host); if (btn) btn.disabled = true;
+        try { await API.post('/invoices', b); closeModal(); toast('发票已创建'); viewInvoices(); }
+        catch (e) { toast(e.message, true); if (btn) btn.disabled = false; }
+      },
+    });
+    var host = $('#modalHost');
+    function sync(h) { $$('.li-row', h).forEach(function (el) { var i = +el.dataset.i; rows[i] = { description: $('.li-desc', el).value, quantity: $('.li-qty', el).value, unitPrice: $('.li-price', el).value }; }); }
+    function rerender() { $('#liList', host).innerHTML = liHtml(); bindRows(); $('#liTotals', host).innerHTML = totalsHtml(); }
+    function bindRows() {
+      $$('.li-row', host).forEach(function (el) {
+        ['.li-desc', '.li-qty', '.li-price'].forEach(function (sel) {
+          $(sel, el).oninput = function () { sync(host); $('.li-total', el).textContent = money((Number($('.li-qty', el).value) || 0) * (Number($('.li-price', el).value) || 0)); $('#liTotals', host).innerHTML = totalsHtml(); };
+        });
+        $('.li-del', el).onclick = function () { sync(host); rows.splice(+el.dataset.i, 1); if (!rows.length) rows.push({ description: '', quantity: 1, unitPrice: 0 }); rerender(); };
       });
-    };
+    }
+    bindRows();
+    $('#liAdd', host).onclick = function () { sync(host); rows.push({ description: '', quantity: 1, unitPrice: 0 }); rerender(); };
+    $('#gst', host).onchange = function (e) { gst = e.target.checked; $('#liTotals', host).innerHTML = totalsHtml(); };
   }
 
   async function viewMessages(parts) {
