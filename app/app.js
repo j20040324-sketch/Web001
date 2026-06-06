@@ -986,7 +986,8 @@
       '<div class="panel"><h3>API 密钥</h3><p style="color:var(--muted);font-size:13px;margin-bottom:10px">用于程序化访问 NovAI API。</p><button class="b" disabled style="opacity:.5">生成密钥（即将上线）</button></div>' +
       '</div>' +
       '<div class="panel"><h3>自动化工作流</h3><table class="tbl"><tbody>' + (wfRows || '<tr><td class="empty">—</td></tr>') + '</tbody></table></div>' +
-      '<div class="panel"><h3>集成</h3><p style="color:var(--muted);font-size:13px">已连接 ' + connected + ' 个 · 共 16 个可接入。<a class="link-accent" href="#/integrations">前往集成市场 →</a></p></div>');
+      '<div class="panel"><h3>集成</h3><p style="color:var(--muted);font-size:13px">已连接 ' + connected + ' 个 · 共 16 个可接入。<a class="link-accent" href="#/integrations">前往集成市场 →</a></p></div>' +
+      '<div class="panel"><h3>演示数据</h3><p style="color:var(--muted);font-size:13px;margin-bottom:10px">一键为当前工作区生成澳洲示例数据（客户 / 项目 / 任务 / 合同 / 发票 / 报告 / 公告 / 会话）。</p><button class="b primary" id="seedDemo">载入示例数据</button></div>');
     $('#saveCo').onclick = async function () {
       var body = clean({ name: $('[name=name]').value, abn: $('[name=abn]').value, phone: $('[name=phone]').value, email: $('[name=email]').value, logoUrl: $('[name=logoUrl]').value, timezone: $('[name=timezone]').value });
       try { await API.patch('/companies/current', body); toast('已保存'); } catch (e) { toast(e.message, true); }
@@ -997,6 +998,7 @@
     };
     $('#chPwd').onclick = changePasswordModal;
     $('#chEmail').onclick = changeEmailModal;
+    $('#seedDemo').onclick = async function () { var b = $('#seedDemo'); b.disabled = true; try { var r = await API.post('/dev/seed-demo', {}); toast(r.message || '已生成示例数据'); } catch (e) { toast(e.message, true); } b.disabled = false; };
     $$('#view [data-pref]').forEach(function (cb) { cb.onchange = async function () { var d = {}; d[cb.dataset.pref] = cb.checked; try { await API.patch('/notification-preferences', d); toast('已更新'); } catch (e) { toast(e.message, true); } }; });
     $$('#view [data-wf]').forEach(function (b) {
       b.onclick = async function () {
