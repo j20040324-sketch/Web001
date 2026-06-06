@@ -37,13 +37,14 @@
     try {
       res = await fetch(url(path), opts);
     } catch (netErr) {
-      // Network error — most often the free backend is cold-starting. Retry.
-      var left = _retries == null ? 3 : _retries;
+      // Network error — almost always the free backend is cold-starting
+      // (~50s). Retry long enough to outlast a full cold start (~75s).
+      var left = _retries == null ? 24 : _retries;
       if (left > 0) {
-        await new Promise(function (r) { setTimeout(r, 2500); });
+        await new Promise(function (r) { setTimeout(r, 3000); });
         return jsonFetch(path, opts, left - 1);
       }
-      var ne = new Error('服务器正在唤醒（免费服务器会休眠），请等约 1 分钟后再试一次。');
+      var ne = new Error('服务器唤醒超时，请稍等 1 分钟后再试一次。');
       ne.network = true;
       throw ne;
     }
@@ -59,8 +60,13 @@
     return data;
   }
 
-  // Warm the backend as soon as this page loads so it's awake by submit time.
-  try { fetch(API_BASE + '/health', { cache: 'no-store' }).catch(function () {}); } catch (e) {}
+  // Warm the backend as soon as this page loads (free instances sleep). Poll
+  // until it responds so it's awake by the time the user submits.
+  (function warmUp(tries) {
+    fetch(API_BASE + '/health', { cache: 'no-store' })
+      .then(function (r) { if (!r || !r.ok) { if (tries > 0) setTimeout(function () { warmUp(tries - 1); }, 3000); } })
+      .catch(function () { if (tries > 0) setTimeout(function () { warmUp(tries - 1); }, 3000); });
+  })(18);
 
   async function register(payload) {
     var d = await jsonFetch('/auth/register', { method: 'POST', body: JSON.stringify(payload) });

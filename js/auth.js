@@ -94,14 +94,18 @@
       var em = email.value.trim();
       if (window.NovaiApi && window.NovaiApi.enabled) {
         var btn = loginForm.querySelector('button[type="submit"]');
-        if (btn) btn.disabled = true;
+        var btnText = btn ? btn.textContent : '';
+        if (btn) { btn.disabled = true; btn.textContent = lang() === 'en' ? 'Connecting…' : '连接中…'; }
+        showMsg(lang() === 'en'
+          ? 'Connecting… if the server was asleep it can take up to a minute to wake. Please wait.'
+          : '正在连接服务器…若服务器在休眠，唤醒最多约需 1 分钟，请耐心等待，不要关闭页面。');
         window.NovaiApi.login(em, pass.value)
           .then(function () {
             try { localStorage.setItem('novai-auth', em); } catch (e3) {}
             showMsg(lang() === 'en' ? 'Signed in!' : '登录成功！');
             setTimeout(function () { window.location.href = 'app/index.html'; }, 500);
           })
-          .catch(function (err) { if (btn) btn.disabled = false; showMsg(err.message); });
+          .catch(function (err) { if (btn) { btn.disabled = false; btn.textContent = btnText; } showMsg(err.message); });
         return;
       }
       try { localStorage.setItem('novai-auth', em); } catch (e2) {}
