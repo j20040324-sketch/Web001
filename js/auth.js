@@ -91,7 +91,20 @@
       if (!EMAIL.test(email.value.trim())) { setError(email, true); ok = false; }
       if (!pass.value) { setError(pass, true); ok = false; }
       if (!ok) return;
-      try { localStorage.setItem('novai-auth', email.value.trim()); } catch (e2) {}
+      var em = email.value.trim();
+      if (window.NovaiApi && window.NovaiApi.enabled) {
+        var btn = loginForm.querySelector('button[type="submit"]');
+        if (btn) btn.disabled = true;
+        window.NovaiApi.login(em, pass.value)
+          .then(function () {
+            try { localStorage.setItem('novai-auth', em); } catch (e3) {}
+            showMsg(lang() === 'en' ? 'Signed in!' : '登录成功！');
+            setTimeout(function () { window.location.href = 'index.html'; }, 500);
+          })
+          .catch(function (err) { if (btn) btn.disabled = false; showMsg(err.message); });
+        return;
+      }
+      try { localStorage.setItem('novai-auth', em); } catch (e2) {}
       showMsg(tr('loginOk'));
       setTimeout(() => { window.location.href = 'index.html'; }, 700);
     });
@@ -114,7 +127,29 @@
       if (!confirm.value || confirm.value !== pass.value) { setError(confirm, true); ok = false; }
       if (!agree.checked) { document.getElementById('agreeField').classList.add('show-err'); ok = false; }
       if (!ok) return;
-      try { localStorage.setItem('novai-auth', email.value.trim()); } catch (e2) {}
+      var em2 = email.value.trim();
+      if (window.NovaiApi && window.NovaiApi.enabled) {
+        var parts = name.value.trim().split(/\s+/);
+        var companyEl = document.getElementById('company');
+        var payload = {
+          firstName: parts[0] || name.value.trim(),
+          lastName: parts.slice(1).join(' ') || '-',
+          email: em2,
+          password: pass.value,
+          companyName: (companyEl && companyEl.value.trim()) || name.value.trim() + (lang() === 'en' ? "'s team" : ' 的团队'),
+        };
+        var btn2 = signupForm.querySelector('button[type="submit"]');
+        if (btn2) btn2.disabled = true;
+        window.NovaiApi.register(payload)
+          .then(function () {
+            try { localStorage.setItem('novai-auth', em2); } catch (e3) {}
+            showMsg(lang() === 'en' ? 'Account created!' : '账号已创建！');
+            setTimeout(function () { window.location.href = 'index.html'; }, 500);
+          })
+          .catch(function (err) { if (btn2) btn2.disabled = false; showMsg(err.message); });
+        return;
+      }
+      try { localStorage.setItem('novai-auth', em2); } catch (e2) {}
       showMsg(tr('signupOk'));
       setTimeout(() => { window.location.href = 'index.html'; }, 700);
     });

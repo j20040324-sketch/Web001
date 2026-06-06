@@ -231,6 +231,8 @@ function bindAuthActions() {
       e.preventDefault();
       try {
         localStorage.removeItem('novai-auth');
+        localStorage.removeItem('novai-access');
+        localStorage.removeItem('novai-refresh');
       } catch (err) {}
       window.location.href = 'index.html';
     });

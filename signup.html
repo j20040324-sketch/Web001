@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="css/style.css" />
     <script src="js/main.js" defer></script>
     <script src="js/site.js" defer></script>
+    <script src="js/api.js" defer></script>
     <script src="js/auth.js" defer></script>
     <title>注册 — NOVAI Flow</title>
   </head>
@@ -45,6 +46,13 @@
               <input id="name" name="name" type="text" autocomplete="name"
                 placeholder="你的名字" data-en-placeholder="Your name" />
               <p class="err" data-en="Please enter your name.">请输入你的姓名。</p>
+            </div>
+
+            <div class="auth-field">
+              <label for="company" data-en="Team / company name">团队 / 公司名称</label>
+              <input id="company" name="company" type="text" autocomplete="organization"
+                placeholder="你的团队或公司" data-en-placeholder="Your team or company" />
+              <p class="err" data-en="Please enter a team or company name.">请输入团队或公司名称。</p>
             </div>
 
             <div class="auth-field">
