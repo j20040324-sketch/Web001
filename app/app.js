@@ -251,7 +251,7 @@
   function renderDash() {
     var widgets = dashState.widgets, order = dashState.order, editing = dashState.editing;
     var cells = order.filter(function (id) { return widgets[id] && widgets[id].html; }).map(function (id) {
-      var size = sizeOf(id), cls = size === 'kpi' ? 'w-kpi' : (size === 'full' ? 'w-full' : 'w-half');
+      var w = widgets[id], size = sizeOf(id), cls = size === 'kpi' ? 'w-kpi' : (size === 'full' ? 'w-full' : 'w-half');
       return '<div class="dash-cell ' + cls + '" data-id="' + id + '"' + (editing ? ' draggable="true"' : '') + '>' +
         (editing ? '<button class="rm-badge" data-rm title="移除">−</button><button class="size-badge" data-size title="切换尺寸（小/中/大）">' + sizeLabel(size) + '</button>' : '') +
         w.html + '</div>';
