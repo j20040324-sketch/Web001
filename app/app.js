@@ -246,15 +246,22 @@
   }
 
   // iOS home-screen–style editing: jiggle, drag to reorder, − to remove, + gallery to add.
-  var dashState = { widgets: null, order: null, sizes: {}, editing: false };
+  var dashState = { widgets: null, order: null, sizes: {}, editing: false, sizePopFor: null };
 
   function renderDash() {
     var widgets = dashState.widgets, order = dashState.order, editing = dashState.editing;
     var cells = order.filter(function (id) { return widgets[id] && widgets[id].html; }).map(function (id) {
       var w = widgets[id], size = sizeOf(id), cls = size === 'kpi' ? 'w-kpi' : (size === 'full' ? 'w-full' : 'w-half');
-      return '<div class="dash-cell ' + cls + '" data-id="' + id + '"' + (editing ? ' draggable="true"' : '') + '>' +
-        (editing ? '<button class="rm-badge" data-rm title="移除">−</button><button class="size-badge" data-size title="切换尺寸（小/中/大）">' + sizeLabel(size) + '</button>' : '') +
-        w.html + '</div>';
+      var popOpen = editing && dashState.sizePopFor === id;
+      var badges = '';
+      if (editing) {
+        badges = '<button class="rm-badge" data-rm title="移除">−</button>' +
+          '<button class="size-badge" data-size title="调整尺寸">' + sizeLabel(size) + '</button>' +
+          (popOpen ? '<div class="size-pop">' + ['kpi', 'half', 'full'].map(function (sz) {
+            return '<button data-sz="' + sz + '"' + (sz === size ? ' class="active"' : '') + '>' + sizeLabel(sz) + '</button>';
+          }).join('') + '</div>' : '');
+      }
+      return '<div class="dash-cell ' + cls + (popOpen ? ' pop-open' : '') + '" data-id="' + id + '"' + (editing ? ' draggable="true"' : '') + '>' + badges + w.html + '</div>';
     }).join('') || '<p class="loading">没有组件，点「添加组件」。</p>';
     var head = editing
       ? '<div style="display:flex;gap:8px"><button class="b" id="dashAdd">+ 添加组件</button><button class="b primary" id="dashDone">完成</button></div>'
@@ -265,21 +272,30 @@
   }
 
   function bindDash() {
-    var c = $('#dashCustomize'); if (c) c.onclick = function () { dashState.editing = true; renderDash(); };
-    var done = $('#dashDone'); if (done) done.onclick = function () { dashState.editing = false; saveDash(); renderDash(); };
+    var c = $('#dashCustomize'); if (c) c.onclick = function () { dashState.editing = true; dashState.sizePopFor = null; renderDash(); };
+    var done = $('#dashDone'); if (done) done.onclick = function () { dashState.editing = false; dashState.sizePopFor = null; saveDash(); renderDash(); };
     var add = $('#dashAdd'); if (add) add.onclick = openAddGallery;
     $$('#dashGrid [data-rm]').forEach(function (b) {
       b.onclick = function (e) {
         e.stopPropagation();
         var id = b.closest('.dash-cell').getAttribute('data-id'), i = dashState.order.indexOf(id);
-        if (i > -1) { dashState.order.splice(i, 1); saveDash(); renderDash(); }
+        if (i > -1) { dashState.order.splice(i, 1); dashState.sizePopFor = null; saveDash(); renderDash(); }
       };
     });
     $$('#dashGrid [data-size]').forEach(function (b) {
       b.onclick = function (e) {
         e.stopPropagation();
         var id = b.closest('.dash-cell').getAttribute('data-id');
-        dashState.sizes[id] = nextSize(sizeOf(id));
+        dashState.sizePopFor = dashState.sizePopFor === id ? null : id; // toggle the size menu
+        renderDash();
+      };
+    });
+    $$('#dashGrid [data-sz]').forEach(function (b) {
+      b.onclick = function (e) {
+        e.stopPropagation();
+        var id = b.closest('.dash-cell').getAttribute('data-id');
+        dashState.sizes[id] = b.getAttribute('data-sz');
+        dashState.sizePopFor = null;
         saveDash(); renderDash();
       };
     });
@@ -336,6 +352,7 @@
     dashState.order = cfg.order.filter(function (id) { return dashState.widgets[id]; });
     dashState.sizes = cfg.sizes || {};
     dashState.editing = false;
+    dashState.sizePopFor = null;
     renderDash();
   }
   function labelOfInvoice(s) { var m = { DRAFT: '草稿', SENT: '已发送', UNPAID: '未付', PAID: '已付', OVERDUE: '逾期', CANCELLED: '已取消' }; return m[s] || s; }
