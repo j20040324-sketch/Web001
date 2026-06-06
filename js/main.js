@@ -114,7 +114,7 @@ function headerHTML() {
 
   const authMini = user
     ? `<a class="mini" href="#" data-action="signout">${t(T.mini.signout)}</a>
-        <a class="mini" href="account.html">${t(T.mini.account)}</a>`
+        <a class="mini" href="app/index.html">${t(T.mini.account)}</a>`
     : `<a class="mini" href="login.html">${t(T.mini.signin)}</a>
         <a class="mini" href="login.html">${t(T.mini.account)}</a>`;
 
@@ -145,7 +145,7 @@ function headerHTML() {
     <a href="company.html">${t(T.mobile.company)}</a>
     <a href="contact.html">${t(T.mobile.contact)}</a>
     ${user
-      ? `<a href="account.html">${t(T.mobile.account)}</a>
+      ? `<a href="app/index.html">${t(T.mobile.account)}</a>
     <a href="#" data-action="signout">${t(T.mobile.signout)}</a>`
       : `<a href="login.html">${t(T.mobile.signin)}</a>
     <a href="login.html">${t(T.mobile.account)}</a>`}

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NOVAI Flow — Workspace</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="app.css" />
+    <script src="api.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body class="app-body">
+    <div class="app-shell">
+      <aside class="app-side">
+        <a class="app-brand" href="#/dashboard">NOVAI <span>Flow</span></a>
+        <nav class="app-nav" id="appNav">
+          <a href="#/dashboard" data-nav="dashboard"><span class="i">▦</span> 仪表盘</a>
+          <a href="#/clients" data-nav="clients"><span class="i">◍</span> 客户</a>
+          <a href="#/tasks" data-nav="tasks"><span class="i">✓</span> 任务</a>
+          <a href="#/projects" data-nav="projects"><span class="i">▤</span> 项目</a>
+          <a href="#/contracts" data-nav="contracts"><span class="i">✎</span> 合同</a>
+          <a href="#/invoices" data-nav="invoices"><span class="i">$</span> 发票</a>
+          <a href="#/messages" data-nav="messages"><span class="i">✉</span> 消息</a>
+          <a href="#/team" data-nav="team"><span class="i">◎</span> 团队</a>
+          <a href="#/settings" data-nav="settings"><span class="i">⚙</span> 设置</a>
+        </nav>
+        <div class="app-side-foot">
+          <a href="../index.html" class="app-side-link">← 返回官网</a>
+        </div>
+      </aside>
+
+      <div class="app-main">
+        <header class="app-top">
+          <button class="app-burger" id="appBurger" aria-label="Menu">☰</button>
+          <div class="app-top-title" id="appTitle">仪表盘</div>
+          <div class="app-top-right">
+            <button class="app-bell" id="appBell" title="通知">🔔<span class="app-bell-dot" id="bellDot" hidden></span></button>
+            <div class="app-user" id="appUser"></div>
+            <button class="app-logout" id="appLogout">退出</button>
+          </div>
+        </header>
+        <main class="app-view" id="view"></main>
+      </div>
+
+      <div class="app-overlay" id="appOverlay"></div>
+    </div>
+
+    <!-- toast + modal host -->
+    <div class="app-toast" id="toast"></div>
+    <div class="app-modal-host" id="modalHost"></div>
+  </body>
+</html>

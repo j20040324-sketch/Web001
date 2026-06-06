@@ -99,7 +99,7 @@
           .then(function () {
             try { localStorage.setItem('novai-auth', em); } catch (e3) {}
             showMsg(lang() === 'en' ? 'Signed in!' : '登录成功！');
-            setTimeout(function () { window.location.href = 'index.html'; }, 500);
+            setTimeout(function () { window.location.href = 'app/index.html'; }, 500);
           })
           .catch(function (err) { if (btn) btn.disabled = false; showMsg(err.message); });
         return;
@@ -144,7 +144,7 @@
           .then(function () {
             try { localStorage.setItem('novai-auth', em2); } catch (e3) {}
             showMsg(lang() === 'en' ? 'Account created!' : '账号已创建！');
-            setTimeout(function () { window.location.href = 'index.html'; }, 500);
+            setTimeout(function () { window.location.href = 'app/index.html'; }, 500);
           })
           .catch(function (err) { if (btn2) btn2.disabled = false; showMsg(err.message); });
         return;
