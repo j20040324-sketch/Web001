@@ -110,6 +110,37 @@
     });
   }
 
+  /* ---- Forgot password ---- */
+  const forgotLink = document.getElementById('forgotLink');
+  if (forgotLink && window.NovaiApi && window.NovaiApi.enabled) {
+    forgotLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      const emailEl = document.getElementById('email');
+      let email = (emailEl && emailEl.value.trim()) || '';
+      if (!email) email = (window.prompt(lang() === 'en' ? 'Enter your account email' : '输入你注册时用的邮箱') || '').trim();
+      if (!email) return;
+      if (!EMAIL.test(email)) { showMsg(lang() === 'en' ? 'Invalid email' : '邮箱格式不正确'); return; }
+      window.NovaiApi.forgotPassword(email).then((r) => {
+        if (r && r.resetUrl) {
+          let token = '';
+          try { token = new URL(r.resetUrl).searchParams.get('token') || ''; } catch (e2) {
+            const m = r.resetUrl.match(/token=([^&]+)/); token = m ? m[1] : '';
+          }
+          const link = 'reset-password.html?token=' + encodeURIComponent(token);
+          const el = document.getElementById('authMsg');
+          if (el) {
+            el.innerHTML = (lang() === 'en' ? 'Reset link ready — ' : '重置链接已生成 — ') +
+              '<a class="link-accent" href="' + link + '">' + (lang() === 'en' ? 'set a new password' : '点此设置新密码') + '</a>';
+            el.classList.add('show');
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        } else {
+          showMsg(lang() === 'en' ? 'No account found for that email.' : '没有找到该邮箱对应的账号，请确认注册邮箱，或前往注册。');
+        }
+      }).catch((err) => showMsg(err.message));
+    });
+  }
+
   /* ---- Signup ---- */
   const signupForm = document.getElementById('signupForm');
   if (signupForm) {

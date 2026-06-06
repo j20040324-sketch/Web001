@@ -63,6 +63,13 @@
       try { await jsonFetch('/auth/logout', { method: 'POST', body: JSON.stringify({ refreshToken: r }) }); } catch (e) {}
     }
   }
+  async function forgotPassword(email) {
+    return jsonFetch('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email: email }) });
+  }
+  async function resetPassword(token, password) {
+    return jsonFetch('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token: token, password: password }) });
+  }
+
   // Authenticated request helper (adds the Bearer token).
   function authed(path, opts) {
     opts = opts || {};
@@ -76,6 +83,8 @@
     register: register,
     login: login,
     logout: logout,
+    forgotPassword: forgotPassword,
+    resetPassword: resetPassword,
     authed: authed,
     getAccess: getAccess,
     clearTokens: clearTokens,
