@@ -220,7 +220,7 @@
     unpaid.forEach(function (i) { focusHtml += focusItem('#/invoices', i.invoiceNumber, money(i.amount) + ' · 待收款'); });
     if (!focusHtml) focusHtml = '<p class="loading">没有待办事项，一切顺利。</p>';
     var tl = (ctx.recent || []).map(function (e) { return '<li><div class="t">' + esc(e.title) + '</div><div class="d">' + fmtDate(e.createdAt) + (e.description ? ' · ' + esc(e.description) : '') + '</div></li>'; }).join('') || '<li class="d">暂无动态</li>';
-    var revHtml = rep ? ('<div class="panel"><h3>收入概览</h3><div style="display:flex;gap:22px;margin-bottom:10px"><div><div style="color:var(--muted);font-size:11px">已收</div><div style="font-family:Sora;font-size:19px;color:' + CHART.green + '">' + money(rep.revenue.paid) + '</div></div><div><div style="color:var(--muted);font-size:11px">待收</div><div style="font-family:Sora;font-size:19px;color:' + CHART.gold + '">' + money(rep.revenue.outstanding) + '</div></div></div>' + donut(invSeg(), 92) + '</div>') : '';
+    var revHtml = rep ? ('<div class="panel"><h3>收入概览</h3><div style="display:flex;gap:22px;margin-bottom:10px"><div><div style="color:var(--muted);font-size:11px">已收</div><div style="font-family:Sora;font-size:19px;color:' + CHART.green + '">' + money(rep.revenue.paid) + '</div></div><div><div style="color:var(--muted);font-size:11px">待收</div><div style="font-family:Sora;font-size:19px;color:' + CHART.gold + '">' + money(rep.revenue.outstanding) + '</div></div></div>' + donut(invSeg(), 110) + '</div>') : '';
 
     return {
       kpi_clients: { size: 'kpi', html: kpi('◍', clientsTotal, '客户总数') },
