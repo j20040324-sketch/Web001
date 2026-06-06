@@ -300,6 +300,15 @@
       };
     });
     if (dashState.editing) wireDashDrag();
+    $('#view').onclick = onDashBlankClick;
+  }
+
+  // Click empty space: first closes the size menu, then exits edit mode (iOS-like).
+  function onDashBlankClick(e) {
+    if (!$('#dashGrid') || !dashState.editing) return;            // only on dashboard in edit mode
+    if (e.target.closest('.dash-cell') || e.target.closest('.pv-head')) return; // ignore widgets & header
+    if (dashState.sizePopFor) { dashState.sizePopFor = null; renderDash(); return; }
+    dashState.editing = false; saveDash(); renderDash();
   }
 
   function wireDashDrag() {
