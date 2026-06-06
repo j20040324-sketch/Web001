@@ -184,26 +184,10 @@
       API.get('/tasks?overdue=true&pageSize=6').catch(function () { return { items: [] }; }),
       API.get('/contracts').catch(function () { return { items: [] }; }),
       API.get('/invoices').catch(function () { return { items: [] }; }),
-      API.get('/payment-settings').catch(function () { return {}; }),
-      API.get('/members').catch(function () { return { members: [], pendingInvitations: [] }; }),
     ]);
-    var d = res[0], rep = res[1], overdue = res[2], contracts = res[3], invoices = res[4], pay = res[5], team = res[6];
+    var d = res[0], rep = res[1], overdue = res[2], contracts = res[3], invoices = res[4];
     var m = d.metrics;
-
-    // ---- onboarding checklist ----
     var clientsTotal = rep ? sumVals(rep.clientsByStatus) : 0;
-    var tasksTotal = rep ? sumVals(rep.tasksByStatus) : 0;
-    var steps = [
-      { done: clientsTotal > 0, label: '添加第一位客户', href: '#/clients' },
-      { done: tasksTotal > 0, label: '创建一个任务', href: '#/tasks' },
-      { done: !!pay.accountNumber, label: '设置收款信息', href: '#/settings' },
-      { done: (team.members || []).length > 1 || (team.pendingInvitations || []).length > 0, label: '邀请团队成员', href: '#/team' },
-    ];
-    var allDone = steps.every(function (s) { return s.done; });
-    var checklistHtml = allDone ? '' :
-      '<div class="panel"><h3>快速上手（' + steps.filter(function (s) { return s.done; }).length + '/' + steps.length + '）</h3><div class="checklist">' +
-      steps.map(function (s) { return '<a class="ck ' + (s.done ? 'done' : '') + '" href="' + s.href + '"><span class="box">✓</span><span>' + esc(s.label) + '</span>' + (s.done ? '' : '<span class="go">前往 →</span>') + '</a>'; }).join('') +
-      '</div></div>';
 
     // ---- KPIs ----
     var kpis = '<div class="kpi-grid">' +
@@ -247,7 +231,7 @@
     }).join('') || '<li class="d">暂无动态</li>';
 
     setView('<div class="pv-head"><div><h1>仪表盘</h1><p>今天需要关注的事项</p></div></div>' +
-      checklistHtml + kpis + charts +
+      kpis + charts +
       '<div class="grid2"><div class="panel"><h3>今日待办</h3><div class="focus">' + focus + '</div></div>' +
       '<div class="panel"><h3>最近动态</h3><ul class="tl">' + tl + '</ul></div></div>');
   }
