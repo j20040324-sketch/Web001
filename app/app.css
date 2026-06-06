@@ -323,12 +323,13 @@
 
 /* Customizable dashboard grid */
 /* iOS-style fixed grid: uniform row units so dense packing leaves no gaps */
-.dash-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; grid-auto-rows: 104px; grid-auto-flow: row dense; }
+.dash-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; grid-auto-rows: 110px; grid-auto-flow: row dense; }
 .dash-grid > .w-kpi { grid-column: span 1; grid-row: span 1; }
 .dash-grid > .w-half { grid-column: span 2; grid-row: span 2; }
 .dash-grid > .w-full { grid-column: span 4; grid-row: span 2; }
 .dash-cell { overflow: hidden; border-radius: 10px; }
-.dash-cell > .panel { height: 100%; margin-bottom: 0; overflow: auto; }
+.dash-cell > .panel { height: 100%; margin-bottom: 0; overflow: hidden; padding: 16px 18px; }
+.dash-cell > .panel h3 { margin-bottom: 10px; }
 .dash-cell > .kpi { height: 100%; }
 .dash-cell.drop-target { outline: 2px dashed var(--accent); outline-offset: 2px; }
 @media (max-width: 1100px) { .dash-grid > .w-kpi { grid-column: span 2; } .dash-grid > .w-half { grid-column: span 4; } }
