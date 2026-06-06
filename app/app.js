@@ -1229,6 +1229,99 @@
     $$('#view [data-del]').forEach(function (b) { b.onclick = function () { confirmDel('删除此公告？', async function () { await API.del('/announcements/' + b.dataset.del); toast('已删除'); viewAnnouncements(); }); }; });
   }
 
+  // ======================= CLIENT PORTAL =======================
+  function dl(pdfUrl, name) { return pdfUrl ? '<button class="b sm" data-pdl="' + esc(pdfUrl) + '" data-pn="' + esc(name) + '">下载</button>' : ''; }
+  function bindPortalDownloads() { $$('#view [data-pdl]').forEach(function (b) { b.onclick = async function () { try { await API.download(b.dataset.pdl, b.dataset.pn); } catch (e) { toast(e.message, true); } }; }); }
+
+  async function pOverview() {
+    loading();
+    var me = await API.get('/portal/me');
+    var c = me.client, co = me.company;
+    var res = await Promise.all([
+      API.get('/portal/projects').then(function (r) { return r.items; }).catch(function () { return []; }),
+      API.get('/portal/invoices').then(function (r) { return r.items; }).catch(function () { return []; }),
+      API.get('/portal/contracts').then(function (r) { return r.items; }).catch(function () { return []; }),
+    ]);
+    var projects = res[0], invoices = res[1], contracts = res[2];
+    var unpaid = invoices.filter(function (i) { return ['UNPAID', 'OVERDUE', 'SENT'].indexOf(i.status) > -1; }).length;
+    var unsigned = contracts.filter(function (x) { return x.status === 'SENT' || x.status === 'VIEWED'; }).length;
+    var pl = projects.slice(0, 6).map(function (p) { return '<li><div class="t">' + esc(p.projectName) + '</div><div class="d">' + badge(labelOf(PROJECT_STATUS, p.status), p.status === 'COMPLETED' ? 'green' : 'gold') + (p.dueDate ? ' · 截止 ' + fmtDay(p.dueDate) : '') + '</div></li>'; }).join('') || '<li class="d">暂无项目</li>';
+    setView('<div class="pv-head"><div><h1>你好，' + esc(c.firstName || '') + '</h1><p>' + esc(co ? co.name : '') + ' · 客户门户</p></div></div>' +
+      '<div class="kpi-grid">' + kpi('▤', projects.length, '我的项目') + kpi('✎', unsigned, '待签合同', unsigned > 0) + kpi('$', unpaid, '待付发票', unpaid > 0) + '</div>' +
+      '<div class="panel"><h3>项目进展</h3><ul class="tl">' + pl + '</ul></div>');
+  }
+  async function pProjects() {
+    loading();
+    var items = (await API.get('/portal/projects')).items || [];
+    var rows = items.map(function (p) { return '<tr><td>' + esc(p.projectName) + '</td><td>' + badge(labelOf(PROJECT_STATUS, p.status), p.status === 'COMPLETED' ? 'green' : 'gold') + '</td><td>' + (p.dueDate ? fmtDay(p.dueDate) : '-') + '</td></tr>'; }).join('') || '<tr><td class="empty" colspan="3">暂无项目</td></tr>';
+    setView('<div class="pv-head"><div><h1>我的项目</h1></div></div><div class="panel"><table class="tbl"><thead><tr><th>名称</th><th>状态</th><th>截止</th></tr></thead><tbody>' + rows + '</tbody></table></div>');
+  }
+  async function pContracts() {
+    loading();
+    var items = (await API.get('/portal/contracts')).items || [];
+    var rows = items.map(function (x) { return '<tr><td>' + esc(x.title) + '</td><td>' + badge(x.status, x.status === 'SIGNED' ? 'green' : 'gold') + '</td><td>' + dl(x.signedFileUrl, x.title + '.html') + '</td></tr>'; }).join('') || '<tr><td class="empty" colspan="3">暂无合同</td></tr>';
+    setView('<div class="pv-head"><div><h1>我的合同</h1><p>待签合同请查收对方发来的签署链接</p></div></div><div class="panel"><table class="tbl"><thead><tr><th>标题</th><th>状态</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>');
+    bindPortalDownloads();
+  }
+  async function pInvoices() {
+    loading();
+    var items = (await API.get('/portal/invoices')).items || [];
+    var rows = items.map(function (i) { return '<tr class="clickable" data-id="' + i.id + '"><td>' + esc(i.invoiceNumber) + '</td><td>' + money(i.amount) + '</td><td>' + (i.dueDate ? fmtDay(i.dueDate) : '-') + '</td><td>' + badge(i.status, i.status === 'PAID' ? 'green' : (i.status === 'OVERDUE' ? 'red' : 'gold')) + '</td><td>' + dl(i.pdfUrl, i.invoiceNumber + '.html') + '</td></tr>'; }).join('') || '<tr><td class="empty" colspan="5">暂无发票</td></tr>';
+    setView('<div class="pv-head"><div><h1>我的发票</h1></div></div><div class="panel"><table class="tbl"><thead><tr><th>编号</th><th>金额</th><th>到期</th><th>状态</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>');
+    bindPortalDownloads();
+    $$('#view tr.clickable').forEach(function (tr) {
+      tr.onclick = function (e) {
+        if (e.target.closest('[data-pdl]')) return;
+        var i = items.filter(function (x) { return x.id === tr.dataset.id; })[0];
+        openModal('发票 ' + i.invoiceNumber, '<dl class="kv"><dt>金额</dt><dd>' + money(i.amount) + '</dd><dt>状态</dt><dd>' + badge(i.status) + '</dd><dt>账户名</dt><dd>' + esc(i.bankAccountName || '-') + '</dd><dt>BSB</dt><dd>' + esc(i.bankBsb || '-') + '</dd><dt>账号</dt><dd>' + esc(i.bankAccountNumber || '-') + '</dd><dt>付款参考</dt><dd>' + esc(i.paymentReference || '-') + '</dd></dl>', {});
+      };
+    });
+  }
+  async function pFiles() {
+    loading();
+    var items = (await API.get('/portal/files')).items || [];
+    var rows = items.map(function (f) { return '<tr><td>' + esc(f.fileName) + '</td><td>' + (f.fileSize ? Math.round(f.fileSize / 1024) + ' KB' : '-') + '</td><td><button class="b sm" data-pdl="/api/v1/files/' + f.id + '/download" data-pn="' + esc(f.fileName) + '">下载</button></td></tr>'; }).join('') || '<tr><td class="empty" colspan="3">暂无文件</td></tr>';
+    setView('<div class="pv-head"><div><h1>我的文件</h1></div></div><div class="panel"><table class="tbl"><thead><tr><th>文件名</th><th>大小</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>');
+    bindPortalDownloads();
+  }
+  async function pReports() {
+    loading();
+    var items = (await API.get('/portal/reports')).items || [];
+    var rows = items.map(function (x) { return '<tr><td>' + esc(x.title) + '</td><td>' + fmtDate(x.sentAt) + '</td><td>' + dl(x.pdfUrl, x.title + '.html') + '</td></tr>'; }).join('') || '<tr><td class="empty" colspan="3">暂无报告</td></tr>';
+    setView('<div class="pv-head"><div><h1>我的报告</h1></div></div><div class="panel"><table class="tbl"><thead><tr><th>标题</th><th>发送时间</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>');
+    bindPortalDownloads();
+  }
+  async function pAnnouncements() {
+    loading();
+    var items = (await API.get('/portal/announcements')).items || [];
+    var list = items.map(function (a) { return '<div class="panel"><h3>' + esc(a.title) + '</h3><p style="font-size:14px;white-space:pre-wrap">' + esc(a.content) + '</p><div class="d" style="color:var(--muted);font-size:12px;margin-top:8px">' + fmtDate(a.publishedAt) + '</div></div>'; }).join('') || '<div class="panel"><p class="loading">暂无公告</p></div>';
+    setView('<div class="pv-head"><div><h1>公告</h1></div></div>' + list);
+  }
+  async function pMessages() {
+    loading();
+    var r = await API.get('/portal/messages');
+    var msgs = (r.messages || []).map(function (m) { return '<div class="cmsg ' + (m.senderType === 'CLIENT' ? 'staff' : 'client') + '">' + esc(m.content) + '</div>'; }).join('') || '<div class="loading">还没有消息，发条消息开始吧</div>';
+    setView('<div class="pv-head"><div><h1>消息</h1></div></div><div class="panel chat-wrap"><div class="chat-list" id="cl">' + msgs + '</div><form class="chat-form" id="cf"><input id="ct" placeholder="输入消息…" autocomplete="off"/><button class="b primary" type="submit">发送</button></form></div>');
+    var cl = $('#cl'); cl.scrollTop = cl.scrollHeight;
+    $('#cf').onsubmit = async function (e) { e.preventDefault(); var v = $('#ct').value.trim(); if (!v) return; $('#ct').value = ''; await API.post('/portal/messages', { content: v }); pMessages(); };
+  }
+  async function pProfile() {
+    loading();
+    var me = await API.get('/portal/me');
+    var c = me.client;
+    setView('<div class="pv-head"><div><h1>我的资料</h1></div></div>' +
+      '<div class="grid2"><div class="panel"><h3>资料</h3><dl class="kv"><dt>姓名</dt><dd>' + esc((c.firstName || '') + ' ' + (c.lastName || '')) + '</dd><dt>邮箱</dt><dd>' + esc(c.email || '-') + '</dd><dt>电话</dt><dd>' + esc(c.phone || '-') + '</dd><dt>所属</dt><dd>' + esc(me.company ? me.company.name : '-') + '</dd></dl></div>' +
+      '<div class="panel"><h3>安全</h3><button class="b" id="chPwd">更改密码</button></div></div>');
+    $('#chPwd').onclick = changePasswordModal;
+  }
+  var PORTAL_ROUTES = { overview: pOverview, projects: pProjects, messages: pMessages, contracts: pContracts, invoices: pInvoices, files: pFiles, reports: pReports, announcements: pAnnouncements, profile: pProfile };
+  var PORTAL_TITLES = { overview: '概览', projects: '我的项目', messages: '消息', contracts: '我的合同', invoices: '我的发票', files: '我的文件', reports: '我的报告', announcements: '公告', profile: '我的资料' };
+  function renderPortalNav() {
+    $('#appNav').innerHTML = '<div class="nav-sec">客户门户</div>' +
+      [['overview', '概览'], ['projects', '我的项目'], ['messages', '消息'], ['contracts', '我的合同'], ['invoices', '我的发票'], ['files', '我的文件'], ['reports', '我的报告'], ['announcements', '公告'], ['profile', '我的资料']]
+        .map(function (x) { return '<a class="nav-item" href="#/' + x[0] + '" data-nav="' + x[0] + '">' + x[1] + '</a>'; }).join('');
+  }
+
   // ======================= shell + router =======================
   var ROUTES = { dashboard: viewDashboard, clients: viewClients, tasks: viewTasks, projects: viewProjects, files: viewFiles, contracts: viewContracts, invoices: viewInvoices, messages: viewMessages, report: viewReportDocs, reports: viewReports, automations: viewAutomations, integrations: viewIntegrations, announcements: viewAnnouncements, team: viewTeam, settings: viewSettings, account: viewAccount };
   var TITLES = { dashboard: '仪表盘', clients: '客户', tasks: '任务', projects: '项目', files: '文件', contracts: '合同', invoices: '发票', messages: '消息', report: '报告', reports: '报表', automations: '自动化', integrations: '集成', announcements: '公告', team: '团队', settings: '设置', account: '个人信息' };
@@ -1239,8 +1332,8 @@
     $$('#appNav [data-nav]').forEach(function (a) { a.classList.toggle('active', a.getAttribute('data-nav') === key); });
     var leaf = $('#appNav [data-nav="' + key + '"]');
     if (leaf) { var grp = leaf.closest('.nav-group'); if (grp) grp.classList.add('open'); }
-    $('#appTitle').textContent = TITLES[key] || 'NOVAI Flow';
-    renderBookmarkStar();
+    $('#appTitle').textContent = (window.PORTAL ? PORTAL_TITLES : TITLES)[key] || 'NOVAI Flow';
+    if (!window.PORTAL) renderBookmarkStar();
   }
 
   // ---- bookmarks ----
@@ -1295,7 +1388,7 @@
       '<div class="mh">工作区</div>' + (wsHtml || '<div class="loading" style="padding:6px 10px">无</div>') +
       '<div class="div"></div><button data-act="email">更改邮箱</button><button data-act="password">更改密码</button>' +
       '<div class="div"></div><button data-act="logout">退出登录</button>';
-    $('#appMenu [data-act="profile"]').onclick = function () { menu.hidden = true; location.hash = '#/account'; };
+    $('#appMenu [data-act="profile"]').onclick = function () { menu.hidden = true; location.hash = window.PORTAL ? '#/profile' : '#/account'; };
     $$('#appMenu [data-switch]').forEach(function (b) {
       b.onclick = async function () {
         try { var r = await API.post('/auth/switch', { companyId: b.dataset.switch }); localStorage.setItem('novai-access', r.accessToken); localStorage.setItem('novai-refresh', r.refreshToken); toast('已切换工作区'); location.reload(); } catch (e) { toast(e.message, true); }
@@ -1308,13 +1401,18 @@
   function closeSide() { $('.app-side').classList.remove('open'); $('#appOverlay').classList.remove('show'); }
 
   async function route() {
-    var hash = (location.hash || '').replace(/^#\/?/, '') || 'dashboard';
+    var def = window.PORTAL ? 'overview' : 'dashboard';
+    var hash = (location.hash || '').replace(/^#\/?/, '') || def;
     var parts = hash.split('/');
     var key = parts[0];
     setActiveNav(key);
     closeModal();
     closeSide();
     try {
+      if (window.PORTAL) {
+        var pfn = PORTAL_ROUTES[key] || pOverview;
+        return await pfn(parts.slice(1));
+      }
       if (key === 'clients' && parts[1]) return await viewClientDetail(parts[1]);
       var fn = ROUTES[key] || viewDashboard;
       await fn(parts.slice(1));
@@ -1333,11 +1431,21 @@
 
   document.addEventListener('DOMContentLoaded', async function () {
     if (!API.isAuthed()) { API.gotoLogin(); return; }
+    var me;
     try {
-      var me = await API.get('/auth/me');
+      me = await API.get('/auth/me');
       $('#appUser').textContent = (me.user.firstName || '') + (me.company ? ' · ' + me.company.name : '');
       $('#appAv').textContent = ((me.user.firstName || me.user.email || 'N').trim()[0] || 'N').toUpperCase();
     } catch (e) { if (e && e.status === 401) return; }
+
+    // Client users get the simplified portal (different nav + routes).
+    if (me && me.role === 'CLIENT') {
+      window.PORTAL = true;
+      renderPortalNav();
+      var sb = $('#appSearch'); if (sb) sb.style.display = 'none';
+      var bk = $('#appBookmark'); if (bk) bk.style.display = 'none';
+    }
+
     $('#appBurger').onclick = function () { $('.app-side').classList.add('open'); $('#appOverlay').classList.add('show'); };
     $('#appOverlay').onclick = closeSide;
 
@@ -1345,7 +1453,7 @@
     $$('#appNav .nav-grp-h').forEach(function (h) { h.onclick = function () { h.parentNode.classList.toggle('open'); }; });
     // bookmarks + account menu
     renderBookmarks();
-    $('#appBookmark').onclick = toggleBookmark;
+    var bkBtn = $('#appBookmark'); if (bkBtn) bkBtn.onclick = toggleBookmark;
     $('#appAccountBtn').onclick = function (e) { e.stopPropagation(); openAccountMenu(); };
     document.addEventListener('click', function (e) { var m = $('#appMenu'), btn = $('#appAccountBtn'); if (m && !m.hidden && !m.contains(e.target) && !btn.contains(e.target)) m.hidden = true; });
     $('#appBell').onclick = async function () {
@@ -1354,7 +1462,7 @@
       openModal('通知', '<ul class="tl">' + list + '</ul>', { submitLabel: '全部已读', onSubmit: async function () { await API.patch('/notifications/read-all', {}); closeModal(); loadBadge(); } });
     };
     var searchInput = $('#appSearch'), searchRes = $('#searchRes');
-    if (searchInput) {
+    if (searchInput && !window.PORTAL) {
       var doSearch = debounce(async function () {
         var q = searchInput.value.trim();
         if (q.length < 2) { searchRes.hidden = true; return; }
@@ -1377,7 +1485,7 @@
       searchRes.addEventListener('click', function () { searchRes.hidden = true; searchInput.value = ''; });
     }
     window.addEventListener('hashchange', route);
-    if (!location.hash) location.hash = '#/dashboard';
+    if (!location.hash) location.hash = window.PORTAL ? '#/overview' : '#/dashboard';
     route();
     loadBadge();
   });
