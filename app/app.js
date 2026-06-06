@@ -1153,9 +1153,85 @@
     $('#preview').onclick = function () { sync(); openModal(rep.title, '<div style="background:#fff;color:#111;border-radius:8px;padding:16px;max-height:60vh;overflow:auto">' + renderReportPreview(rep) + '</div>', {}); };
   }
 
+  // ---- Integrations marketplace ----
+  var INTEGRATIONS = [
+    { p: 'GMAIL', name: 'Gmail', cat: '邮件' }, { p: 'OUTLOOK', name: 'Outlook', cat: '邮件' },
+    { p: 'XERO', name: 'Xero', cat: '财务' }, { p: 'MYOB', name: 'MYOB', cat: '财务' },
+    { p: 'STRIPE', name: 'Stripe', cat: '支付' }, { p: 'PAYPAL', name: 'PayPal', cat: '支付' },
+    { p: 'DOCUSIGN', name: 'DocuSign', cat: '电子签' },
+    { p: 'GOOGLE_DRIVE', name: 'Google Drive', cat: '文件' }, { p: 'ONEDRIVE', name: 'OneDrive', cat: '文件' }, { p: 'SHAREPOINT', name: 'SharePoint', cat: '文件' },
+    { p: 'SLACK', name: 'Slack', cat: '沟通' }, { p: 'TEAMS', name: 'Microsoft Teams', cat: '沟通' },
+    { p: 'OFFICERND', name: 'OfficeRnD', cat: '行业', soon: true }, { p: 'PROPERTYME', name: 'PropertyMe', cat: '行业', soon: true },
+    { p: 'UNLEASHED', name: 'Unleashed', cat: '行业', soon: true }, { p: 'INSPECTION_EXPRESS', name: 'Inspection Express', cat: '行业', soon: true },
+  ];
+  function intStatusBadge(st) {
+    if (st === 'MOCK_CONNECTED') return badge('已模拟连接', 'green');
+    if (st === 'CONNECTED') return badge('已连接', 'green');
+    if (st === 'ERROR') return badge('错误', 'red');
+    return badge('未连接');
+  }
+  async function viewIntegrations() {
+    loading();
+    var r = await API.get('/integrations').catch(function () { return { items: [] }; });
+    var map = {}; (r.items || []).forEach(function (i) { map[i.provider] = i.status; });
+    var cards = INTEGRATIONS.map(function (it) {
+      var st = map[it.p] || 'DISCONNECTED';
+      var connected = st === 'MOCK_CONNECTED' || st === 'CONNECTED';
+      var actions = it.soon ? '<span class="badge gold">即将上线</span>'
+        : (connected ? '<button class="b sm" data-logs="' + it.p + '">日志</button><button class="b sm danger" data-disc="' + it.p + '">断开</button>'
+          : '<button class="b sm primary" data-mock="' + it.p + '">模拟连接</button>');
+      return '<div class="int-card"><div class="int-top"><div class="int-icon">' + esc(it.name[0]) + '</div><div><div class="int-name">' + esc(it.name) + '</div><div class="int-cat">' + esc(it.cat) + '</div></div></div>' +
+        '<div class="int-foot"><span>' + (it.soon ? badge('即将上线', 'gold') : intStatusBadge(st)) + '</span><div class="rowacts">' + actions + '</div></div></div>';
+    }).join('');
+    setView('<div class="pv-head"><div><h1>集成</h1><p>连接你日常用的工具（当前为模拟连接，未接入真实 API）</p></div></div><div class="int-grid">' + cards + '</div>');
+    $$('#view [data-mock]').forEach(function (b) { b.onclick = async function () { await API.post('/integrations/' + b.dataset.mock + '/mock-connect', {}); toast('已模拟连接'); viewIntegrations(); }; });
+    $$('#view [data-disc]').forEach(function (b) { b.onclick = async function () { await API.del('/integrations/' + b.dataset.disc); toast('已断开'); viewIntegrations(); }; });
+    $$('#view [data-logs]').forEach(function (b) { b.onclick = async function () { var l = await API.get('/integrations/' + b.dataset.logs + '/logs'); var list = (l.items || []).map(function (x) { return '<li><div class="t">' + esc(x.event) + '</div><div class="d">' + esc(x.message || '') + ' · ' + fmtDate(x.createdAt) + '</div></li>'; }).join('') || '<li class="d">暂无日志</li>'; openModal('集成日志', '<ul class="tl">' + list + '</ul>', {}); }; });
+  }
+
+  // ---- Automations ----
+  async function viewAutomations() {
+    loading();
+    var r = await API.get('/workflows').catch(function () { return { items: [] }; });
+    var cards = (r.items || []).map(function (w) {
+      return '<div class="panel" style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:14px"><div><div style="font-size:15px">' + esc(w.name) + '</div><div style="color:var(--muted);font-size:12.5px;margin-top:3px">触发：' + esc(w.triggerType) + '</div></div>' +
+        '<div class="rowacts"><button class="b sm" data-test="' + w.id + '">测试运行</button><button class="b sm ' + (w.isActive ? 'primary' : '') + '" data-wf="' + w.id + '" data-on="' + w.isActive + '">' + (w.isActive ? '已启用' : '已停用') + '</button></div></div>';
+    }).join('') || '<p class="loading">暂无自动化</p>';
+    setView('<div class="pv-head"><div><h1>自动化</h1><p>固定工作流模板（开启后由后台定时/事件触发）</p></div></div>' + cards);
+    $$('#view [data-wf]').forEach(function (b) { b.onclick = async function () { await API.patch('/workflows/' + b.dataset.wf, { isActive: b.dataset.on !== 'true' }); toast('已更新'); viewAutomations(); }; });
+    $$('#view [data-test]').forEach(function (b) { b.onclick = async function () { var res = await API.post('/workflows/' + b.dataset.test + '/run-test', {}); toast(res.message || '已触发测试运行'); }; });
+  }
+
+  // ---- Announcements ----
+  var ANN_TARGET = [['ALL_CLIENTS', '所有客户'], ['SELECTED_CLIENTS', '指定客户'], ['TAGS', '按标签']];
+  async function viewAnnouncements() {
+    loading();
+    var r = await API.get('/announcements').catch(function () { return { items: [] }; });
+    var rows = (r.items || []).map(function (a) {
+      return '<tr><td>' + esc(a.title) + '</td><td>' + badge(labelOf(ANN_TARGET, a.targetType)) + '</td><td>' + (a.publishedAt ? badge('已发布', 'green') : badge('草稿', 'gold')) + '</td><td>' + fmtDate(a.createdAt) + '</td><td><div class="rowacts">' + (a.publishedAt ? '' : '<button class="b sm primary" data-pub="' + a.id + '">发布</button>') + '<button class="b sm danger" data-del="' + a.id + '">删</button></div></td></tr>';
+    }).join('');
+    var body = (r.items || []).length ? '<table class="tbl"><thead><tr><th>标题</th><th>对象</th><th>状态</th><th>创建</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>' : emptyState('📣'.replace('📣', '✦'), '暂无公告', '向客户发布更新公告，会显示在客户门户。', 'add', '+ 新建公告');
+    setView('<div class="pv-head"><div><h1>公告</h1><p>面向客户的更新通知</p></div><button class="b primary" id="addA">+ 新建公告</button></div><div class="panel">' + body + '</div>');
+    var addFn = function () {
+      formModal('新建公告', [
+        { name: 'title', label: '标题' },
+        { name: 'content', label: '内容', type: 'textarea' },
+        { name: 'targetType', label: '发送对象', type: 'select', options: ANN_TARGET, value: 'ALL_CLIENTS' },
+        { name: 'publish', label: '立即发布', type: 'select', options: [['yes', '是'], ['no', '否（存草稿）']], value: 'yes' },
+      ], '创建', async function (d) {
+        await API.post('/announcements', { title: d.title, content: d.content, targetType: d.targetType, publish: d.publish === 'yes' });
+        closeModal(); toast('已创建'); viewAnnouncements();
+      });
+    };
+    var a1 = $('#addA'); if (a1) a1.onclick = addFn;
+    var a2 = $('#add'); if (a2) a2.onclick = addFn;
+    $$('#view [data-pub]').forEach(function (b) { b.onclick = async function () { await API.post('/announcements/' + b.dataset.pub + '/publish', {}); toast('已发布'); viewAnnouncements(); }; });
+    $$('#view [data-del]').forEach(function (b) { b.onclick = function () { confirmDel('删除此公告？', async function () { await API.del('/announcements/' + b.dataset.del); toast('已删除'); viewAnnouncements(); }); }; });
+  }
+
   // ======================= shell + router =======================
-  var ROUTES = { dashboard: viewDashboard, clients: viewClients, tasks: viewTasks, projects: viewProjects, files: viewFiles, contracts: viewContracts, invoices: viewInvoices, messages: viewMessages, report: viewReportDocs, reports: viewReports, team: viewTeam, settings: viewSettings, account: viewAccount };
-  var TITLES = { dashboard: '仪表盘', clients: '客户', tasks: '任务', projects: '项目', files: '文件', contracts: '合同', invoices: '发票', messages: '消息', report: '报告', reports: '报表', team: '团队', settings: '设置', account: '个人信息' };
+  var ROUTES = { dashboard: viewDashboard, clients: viewClients, tasks: viewTasks, projects: viewProjects, files: viewFiles, contracts: viewContracts, invoices: viewInvoices, messages: viewMessages, report: viewReportDocs, reports: viewReports, automations: viewAutomations, integrations: viewIntegrations, announcements: viewAnnouncements, team: viewTeam, settings: viewSettings, account: viewAccount };
+  var TITLES = { dashboard: '仪表盘', clients: '客户', tasks: '任务', projects: '项目', files: '文件', contracts: '合同', invoices: '发票', messages: '消息', report: '报告', reports: '报表', automations: '自动化', integrations: '集成', announcements: '公告', team: '团队', settings: '设置', account: '个人信息' };
 
   var currentKey = 'dashboard';
   function setActiveNav(key) {
