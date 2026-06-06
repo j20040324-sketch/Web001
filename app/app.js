@@ -303,10 +303,12 @@
     $('#view').onclick = onDashBlankClick;
   }
 
-  // Click empty space: first closes the size menu, then exits edit mode (iOS-like).
+  // Click anywhere that isn't a control: closes the size menu if open, else
+  // exits edit mode (iOS-like). Dragging doesn't fire a click, so reordering
+  // is unaffected.
   function onDashBlankClick(e) {
-    if (!$('#dashGrid') || !dashState.editing) return;            // only on dashboard in edit mode
-    if (e.target.closest('.dash-cell') || e.target.closest('.pv-head')) return; // ignore widgets & header
+    if (!$('#dashGrid') || !dashState.editing) return; // only on dashboard in edit mode
+    if (e.target.closest('.pv-head') || e.target.closest('.rm-badge') || e.target.closest('.size-badge') || e.target.closest('.size-pop')) return;
     if (dashState.sizePopFor) { dashState.sizePopFor = null; renderDash(); return; }
     dashState.editing = false; saveDash(); renderDash();
   }
