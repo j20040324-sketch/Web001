@@ -845,9 +845,48 @@
     $$('#view [data-del]').forEach(function (b) { b.onclick = function () { confirmDel('删除此文件？', async function () { await API.del('/files/' + b.dataset.del); toast('已删除'); viewFiles(); }); }; });
   }
 
+  async function viewAccount() {
+    setView(skel(2) + skel(3));
+    var me = await API.get('/auth/me');
+    var ms = await API.get('/auth/memberships').catch(function () { return { items: [], currentCompanyId: '' }; });
+    var u = me.user;
+    var verified = !!u.emailVerifiedAt;
+    var av = ((u.firstName || u.email || 'N').trim()[0] || 'N').toUpperCase();
+    var wsRows = (ms.items || []).map(function (w) {
+      var cur = w.companyId === ms.currentCompanyId;
+      return '<tr><td>' + esc(w.companyName) + '</td><td>' + badge(w.role, 'gold') + '</td><td>' + (cur ? badge('当前', 'green') : '<button class="b sm" data-switch="' + w.companyId + '">切换到此</button>') + '</td></tr>';
+    }).join('');
+    setView('<div class="pv-head"><div><h1>个人信息</h1><p>账户与安全设置</p></div></div>' +
+      '<div class="panel profile-hd"><div class="av-lg">' + esc(av) + '</div>' +
+      '<div><div class="nm">' + esc((u.firstName || '') + ' ' + (u.lastName || '')) + '</div><div class="em">' + esc(u.email) + ' ' + (verified ? badge('已验证', 'green') : badge('未验证', 'red')) + '</div></div>' +
+      '<div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap"><button class="b" id="editProfile">编辑资料</button>' + (verified ? '' : '<button class="b" id="verify">验证邮箱</button>') + '</div></div>' +
+      '<div class="grid2">' +
+      '<div class="panel"><h3>资料</h3><dl class="kv"><dt>姓名</dt><dd>' + esc((u.firstName || '') + ' ' + (u.lastName || '')) + '</dd>' +
+      '<dt>邮箱</dt><dd>' + esc(u.email) + '</dd><dt>角色</dt><dd>' + esc(me.role || '-') + '</dd>' +
+      '<dt>所属公司</dt><dd>' + esc(me.company ? me.company.name : '-') + '</dd>' +
+      '<dt>注册时间</dt><dd>' + fmtDay(u.createdAt) + '</dd></dl></div>' +
+      '<div class="panel"><h3>安全</h3><div style="display:flex;flex-direction:column;gap:10px;align-items:flex-start"><button class="b" id="chEmail">更改邮箱</button><button class="b" id="chPwd">更改密码</button></div></div>' +
+      '</div>' +
+      '<div class="panel"><h3>工作区</h3><table class="tbl"><thead><tr><th>名称</th><th>角色</th><th></th></tr></thead><tbody>' + (wsRows || '<tr><td class="empty" colspan="3">—</td></tr>') + '</tbody></table></div>');
+    $('#editProfile').onclick = function () {
+      formModal('编辑资料', [{ name: 'firstName', label: '名', value: u.firstName }, { name: 'lastName', label: '姓', value: u.lastName }], '保存', async function (d) {
+        await API.patch('/auth/profile', clean(d)); closeModal(); toast('已保存');
+        try { var m2 = await API.get('/auth/me'); $('#appUser').textContent = (m2.user.firstName || '') + (m2.company ? ' · ' + m2.company.name : ''); $('#appAv').textContent = ((m2.user.firstName || m2.user.email || 'N').trim()[0] || 'N').toUpperCase(); } catch (e) {}
+        viewAccount();
+      });
+    };
+    $('#chEmail').onclick = changeEmailModal;
+    $('#chPwd').onclick = changePasswordModal;
+    var vb = $('#verify');
+    if (vb) vb.onclick = async function () {
+      try { var r = await API.post('/auth/request-email-verification', {}); openModal('邮箱验证链接', '<p style="font-size:14px;color:var(--muted);margin-bottom:10px">点击下方链接完成验证（暂未发真邮件，先返回给你）：</p><div class="field"><input value="' + esc(r.verifyUrl) + '" readonly/></div>', { submitLabel: '复制', onSubmit: function () { copy(r.verifyUrl); } }); } catch (e) { toast(e.message, true); }
+    };
+    $$('#view [data-switch]').forEach(function (b) { b.onclick = async function () { try { var r = await API.post('/auth/switch', { companyId: b.dataset.switch }); localStorage.setItem('novai-access', r.accessToken); localStorage.setItem('novai-refresh', r.refreshToken); toast('已切换工作区'); location.reload(); } catch (e) { toast(e.message, true); } }; });
+  }
+
   // ======================= shell + router =======================
-  var ROUTES = { dashboard: viewDashboard, clients: viewClients, tasks: viewTasks, projects: viewProjects, files: viewFiles, contracts: viewContracts, invoices: viewInvoices, messages: viewMessages, reports: viewReports, team: viewTeam, settings: viewSettings };
-  var TITLES = { dashboard: '仪表盘', clients: '客户', tasks: '任务', projects: '项目', files: '文件', contracts: '合同', invoices: '发票', messages: '消息', reports: '报表', team: '团队', settings: '设置' };
+  var ROUTES = { dashboard: viewDashboard, clients: viewClients, tasks: viewTasks, projects: viewProjects, files: viewFiles, contracts: viewContracts, invoices: viewInvoices, messages: viewMessages, reports: viewReports, team: viewTeam, settings: viewSettings, account: viewAccount };
+  var TITLES = { dashboard: '仪表盘', clients: '客户', tasks: '任务', projects: '项目', files: '文件', contracts: '合同', invoices: '发票', messages: '消息', reports: '报表', team: '团队', settings: '设置', account: '个人信息' };
 
   var currentKey = 'dashboard';
   function setActiveNav(key) {
@@ -907,9 +946,11 @@
       var cur = w.companyId === data.currentCompanyId;
       return '<button class="ws" data-switch="' + w.companyId + '"' + (cur ? ' disabled' : '') + '><span>' + esc(w.companyName) + ' · ' + esc(w.role) + '</span>' + (cur ? '<span class="tick">✓</span>' : '') + '</button>';
     }).join('');
-    menu.innerHTML = '<div class="mh">工作区</div>' + (wsHtml || '<div class="loading" style="padding:6px 10px">无</div>') +
+    menu.innerHTML = '<button data-act="profile">👤 个人信息</button><div class="div"></div>' +
+      '<div class="mh">工作区</div>' + (wsHtml || '<div class="loading" style="padding:6px 10px">无</div>') +
       '<div class="div"></div><button data-act="email">✉ 更改邮箱</button><button data-act="password">🔑 更改密码</button>' +
       '<div class="div"></div><button data-act="logout">⎋ 退出登录</button>';
+    $('#appMenu [data-act="profile"]').onclick = function () { menu.hidden = true; location.hash = '#/account'; };
     $$('#appMenu [data-switch]').forEach(function (b) {
       b.onclick = async function () {
         try { var r = await API.post('/auth/switch', { companyId: b.dataset.switch }); localStorage.setItem('novai-access', r.accessToken); localStorage.setItem('novai-refresh', r.refreshToken); toast('已切换工作区'); location.reload(); } catch (e) { toast(e.message, true); }
