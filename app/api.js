@@ -91,6 +91,25 @@ window.API = (function () {
     gotoLogin();
   }
 
+  // Authenticated file download. fullPath starts at the host root (e.g.
+  // "/api/v1/files/<id>/download"). Streams to a blob so the Bearer token
+  // can be sent (a plain <a href> can't carry the auth header).
+  async function download(fullPath, filename) {
+    var res = await fetch(API_BASE + fullPath, { headers: { authorization: 'Bearer ' + getAccess() } });
+    if (res.status === 401) {
+      var ok = await tryRefresh();
+      if (ok) res = await fetch(API_BASE + fullPath, { headers: { authorization: 'Bearer ' + getAccess() } });
+      else { gotoLogin(); return; }
+    }
+    if (!res.ok) throw new Error('下载失败 (' + res.status + ')');
+    var blob = await res.blob();
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename || 'download';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+  }
+
   return {
     base: API_BASE,
     isAuthed: function () { return !!getAccess(); },
@@ -101,6 +120,7 @@ window.API = (function () {
     upload: function (p, formData) { return request('POST', p, formData); },
     logout: logout,
     gotoLogin: gotoLogin,
+    download: download,
     downloadUrl: function (relPath) { return API_BASE + relPath; },
   };
 })();

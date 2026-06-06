@@ -36,6 +36,30 @@
     navigator.clipboard.writeText(text).then(function () { toast('已复制到剪贴板'); }, function () {});
   }
   function badge(text, cls) { return '<span class="badge ' + (cls || '') + '">' + esc(text) + '</span>'; }
+  function debounce(fn, ms) {
+    var t;
+    return function () { var a = arguments, c = this; clearTimeout(t); t = setTimeout(function () { fn.apply(c, a); }, ms || 300); };
+  }
+  function emptyState(ico, title, sub, btnId, btnLabel) {
+    return '<div class="empty-state"><div class="ico">' + ico + '</div><div class="t">' + esc(title) + '</div>' +
+      '<div class="s">' + esc(sub || '') + '</div>' +
+      (btnId ? '<button class="b primary" id="' + btnId + '">' + esc(btnLabel) + '</button>' : '') + '</div>';
+  }
+  function pagerHtml(total, page, pageSize) {
+    var pages = Math.max(1, Math.ceil(total / pageSize));
+    if (total <= pageSize) return '';
+    return '<div class="pager"><span>第 ' + page + ' / ' + pages + ' 页 · 共 ' + total + '</span>' +
+      '<button data-pg="' + (page - 1) + '"' + (page <= 1 ? ' disabled' : '') + '>上一页</button>' +
+      '<button data-pg="' + (page + 1) + '"' + (page >= pages ? ' disabled' : '') + '>下一页</button></div>';
+  }
+  function bindPager(reload) { $$('#view [data-pg]').forEach(function (b) { b.onclick = function () { reload(parseInt(b.dataset.pg, 10)); }; }); }
+  function confirmDel(msg, fn) {
+    openModal('确认删除', '<p style="font-size:14px;color:var(--muted)">' + esc(msg) + '</p>', {
+      submitLabel: '删除',
+      onSubmit: async function () { try { await fn(); closeModal(); } catch (e) { toast(e.message, true); } },
+    });
+    var b = $('#modalHost [data-ms]'); if (b) b.classList.add('danger');
+  }
 
   // ---- option sets ----
   var CLIENT_STATUS = [
@@ -122,25 +146,41 @@
       '<div class="panel"><h3>最近动态</h3><ul class="tl">' + tl + '</ul></div>');
   }
 
+  var fClients = { search: '', status: '', page: 1 };
+  function addClientModal() {
+    formModal('新建客户', [
+      { name: 'firstName', label: '名' }, { name: 'lastName', label: '姓' },
+      { name: 'email', label: '邮箱', type: 'email' }, { name: 'phone', label: '电话' },
+      { name: 'companyName', label: '公司' },
+      { name: 'status', label: '状态', type: 'select', options: CLIENT_STATUS.map(function (s) { return [s[0], s[1]]; }), value: 'NEW_LEAD' },
+    ], '创建', async function (data) {
+      await API.post('/clients', clean(data)); closeModal(); toast('客户已创建'); fClients.page = 1; viewClients();
+    });
+  }
   async function viewClients() {
     loading();
-    var r = await API.get('/clients?pageSize=100');
-    var rows = r.items.map(function (c) {
-      return '<tr class="clickable" data-id="' + c.id + '"><td>' + esc(c.firstName + ' ' + c.lastName) + '</td><td>' + esc(c.email || '-') + '</td><td>' + esc(c.phone || '-') + '</td><td>' + statusBadge(c.status) + '</td></tr>';
-    }).join('') || '<tr><td class="empty" colspan="4">还没有客户，点右上角新建</td></tr>';
+    var qs = '?page=' + fClients.page + '&pageSize=10';
+    if (fClients.search) qs += '&search=' + encodeURIComponent(fClients.search);
+    if (fClients.status) qs += '&status=' + fClients.status;
+    var r = await API.get('/clients' + qs);
+    var statusOpts = '<option value="">全部状态</option>' + CLIENT_STATUS.map(function (s) { return '<option value="' + s[0] + '"' + (s[0] === fClients.status ? ' selected' : '') + '>' + s[1] + '</option>'; }).join('');
+    var body;
+    if (!r.items.length && !fClients.search && !fClients.status) {
+      body = emptyState('◍', '还没有客户', '新建第一位客户，开始管理你的客户工作流。', 'add', '+ 新建客户');
+    } else {
+      var rows = r.items.map(function (c) {
+        return '<tr class="clickable" data-id="' + c.id + '"><td>' + esc(c.firstName + ' ' + c.lastName) + '</td><td>' + esc(c.email || '-') + '</td><td>' + esc(c.phone || '-') + '</td><td>' + statusBadge(c.status) + '</td></tr>';
+      }).join('') || '<tr><td class="empty" colspan="4">没有匹配的客户</td></tr>';
+      body = '<table class="tbl"><thead><tr><th>姓名</th><th>邮箱</th><th>电话</th><th>状态</th></tr></thead><tbody>' + rows + '</tbody></table>' + pagerHtml(r.total, r.page, r.pageSize);
+    }
     setView('<div class="pv-head"><div><h1>客户</h1><p>共 ' + r.total + ' 位</p></div><button class="b primary" id="add">+ 新建客户</button></div>' +
-      '<div class="panel"><table class="tbl"><thead><tr><th>姓名</th><th>邮箱</th><th>电话</th><th>状态</th></tr></thead><tbody>' + rows + '</tbody></table></div>');
+      '<div class="filterbar"><input type="search" id="cq" placeholder="搜索姓名 / 邮箱 / 公司…" value="' + esc(fClients.search) + '"/><select id="cs">' + statusOpts + '</select></div>' +
+      '<div class="panel">' + body + '</div>');
     $$('#view tr.clickable').forEach(function (tr) { tr.onclick = function () { location.hash = '#/clients/' + tr.dataset.id; }; });
-    $('#add').onclick = function () {
-      formModal('新建客户', [
-        { name: 'firstName', label: '名' }, { name: 'lastName', label: '姓' },
-        { name: 'email', label: '邮箱', type: 'email' }, { name: 'phone', label: '电话' },
-        { name: 'companyName', label: '公司' },
-        { name: 'status', label: '状态', type: 'select', options: CLIENT_STATUS.map(function (s) { return [s[0], s[1]]; }), value: 'NEW_LEAD' },
-      ], '创建', async function (data) {
-        await API.post('/clients', clean(data)); closeModal(); toast('客户已创建'); viewClients();
-      });
-    };
+    var addBtn = $('#add'); if (addBtn) addBtn.onclick = addClientModal;
+    $('#cq').oninput = debounce(function (e) { fClients.search = e.target.value.trim(); fClients.page = 1; viewClients(); }, 350);
+    $('#cs').onchange = function (e) { fClients.status = e.target.value; fClients.page = 1; viewClients(); };
+    bindPager(function (p) { fClients.page = p; viewClients(); });
   }
 
   async function viewClientDetail(id) {
@@ -153,7 +193,7 @@
     }).join('') || '<li class="d">暂无记录</li>';
     setView(
       '<div class="pv-head"><div><a class="app-side-link" href="#/clients">← 客户列表</a><h1>' + esc(c.firstName + ' ' + c.lastName) + '</h1></div>' +
-      '<div style="display:flex;gap:8px"><button class="b" id="note">+ 备注</button><button class="b" id="edit">编辑</button><button class="b primary" id="invite">邀请门户</button></div></div>' +
+      '<div style="display:flex;gap:8px"><button class="b" id="note">+ 备注</button><button class="b" id="edit">编辑</button><button class="b danger" id="del">删除</button><button class="b primary" id="invite">邀请门户</button></div></div>' +
       '<div class="detail"><div class="panel"><h3>时间线</h3><ul class="tl">' + tl + '</ul></div>' +
       '<div><div class="panel"><h3>资料</h3><dl class="kv">' +
       '<dt>状态</dt><dd>' + statusBadge(c.status) + '</dd>' +
@@ -185,64 +225,135 @@
         openModal('客户门户邀请链接', '<p style="color:var(--muted);font-size:14px;margin-bottom:10px">把链接发给客户，他设置密码后即可登录门户：</p><div class="field"><input value="' + esc(r.inviteUrl) + '" readonly id="lnk"/></div>', { submitLabel: '复制链接', onSubmit: function () { copy(r.inviteUrl); } });
       } catch (e) { toast(e.message, true); }
     };
+    $('#del').onclick = function () {
+      confirmDel('确定删除客户「' + (c.firstName + ' ' + c.lastName) + '」？此操作不可撤销。', async function () {
+        await API.del('/clients/' + id); toast('已删除'); location.hash = '#/clients';
+      });
+    };
   }
 
+  var fTasks = { status: '', page: 1 };
+  function taskFormModal(task) {
+    var t = task || {};
+    formModal(task ? '编辑任务' : '新建任务', [
+      { name: 'title', label: '标题', value: t.title },
+      { name: 'description', label: '描述', type: 'textarea', value: t.description },
+      { name: 'status', label: '状态', type: 'select', options: TASK_STATUS, value: t.status || 'TODO' },
+      { name: 'priority', label: '优先级', type: 'select', options: PRIORITY, value: t.priority || 'MEDIUM' },
+      { name: 'dueDate', label: '截止日期', type: 'date', value: t.dueDate ? t.dueDate.slice(0, 10) : '' },
+    ], '保存', async function (d) {
+      var body = clean(d); if (body.dueDate) body.dueDate = new Date(body.dueDate).toISOString();
+      if (task) await API.patch('/tasks/' + task.id, body);
+      else await API.post('/tasks', body);
+      closeModal(); toast('已保存'); viewTasks();
+    });
+  }
   async function viewTasks() {
     loading();
-    var r = await API.get('/tasks?pageSize=100');
-    var rows = r.items.map(function (t) {
-      return '<tr><td>' + esc(t.title) + '</td><td>' + badge(labelOf(TASK_STATUS, t.status), t.status === 'DONE' ? 'green' : '') + '</td><td>' + badge(labelOf(PRIORITY, t.priority), t.priority === 'URGENT' || t.priority === 'HIGH' ? 'red' : '') + '</td><td>' + (t.dueDate ? fmtDay(t.dueDate) : '-') + '</td><td>' + (t.status !== 'DONE' ? '<button class="b sm" data-done="' + t.id + '">完成</button>' : '✓') + '</td></tr>';
-    }).join('') || '<tr><td class="empty" colspan="5">暂无任务</td></tr>';
+    var qs = '?page=' + fTasks.page + '&pageSize=15';
+    if (fTasks.status) qs += '&status=' + fTasks.status;
+    var r = await API.get('/tasks' + qs);
+    var statusOpts = '<option value="">全部状态</option>' + TASK_STATUS.map(function (s) { return '<option value="' + s[0] + '"' + (s[0] === fTasks.status ? ' selected' : '') + '>' + s[1] + '</option>'; }).join('');
+    var body;
+    if (!r.items.length && !fTasks.status) {
+      body = emptyState('✓', '暂无任务', '创建任务来跟踪每位客户要做的事。', 'add', '+ 新建任务');
+    } else {
+      var rows = r.items.map(function (t) {
+        var done = t.status === 'DONE';
+        return '<tr><td>' + esc(t.title) + '</td><td>' + badge(labelOf(TASK_STATUS, t.status), done ? 'green' : '') + '</td><td>' + badge(labelOf(PRIORITY, t.priority), t.priority === 'URGENT' || t.priority === 'HIGH' ? 'red' : '') + '</td><td>' + (t.dueDate ? fmtDay(t.dueDate) : '-') + '</td><td><div class="rowacts">' +
+          (done ? '' : '<button class="b sm" data-done="' + t.id + '">完成</button>') +
+          '<button class="b sm" data-edit="' + t.id + '">编辑</button><button class="b sm danger" data-del="' + t.id + '">删</button></div></td></tr>';
+      }).join('') || '<tr><td class="empty" colspan="5">没有匹配的任务</td></tr>';
+      body = '<table class="tbl"><thead><tr><th>标题</th><th>状态</th><th>优先级</th><th>截止</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>' + pagerHtml(r.total, r.page, r.pageSize);
+    }
     setView('<div class="pv-head"><div><h1>任务</h1><p>共 ' + r.total + ' 项</p></div><button class="b primary" id="add">+ 新建任务</button></div>' +
-      '<div class="panel"><table class="tbl"><thead><tr><th>标题</th><th>状态</th><th>优先级</th><th>截止</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>');
+      '<div class="filterbar"><select id="ts">' + statusOpts + '</select></div>' +
+      '<div class="panel">' + body + '</div>');
+    var addBtn = $('#add'); if (addBtn) addBtn.onclick = function () { taskFormModal(null); };
+    $('#ts').onchange = function (e) { fTasks.status = e.target.value; fTasks.page = 1; viewTasks(); };
     $$('#view [data-done]').forEach(function (b) { b.onclick = async function () { await API.patch('/tasks/' + b.dataset.done, { status: 'DONE' }); toast('已完成'); viewTasks(); }; });
-    $('#add').onclick = async function () {
-      var opts = await clientOptions();
-      formModal('新建任务', [
-        { name: 'title', label: '标题' }, { name: 'description', label: '描述', type: 'textarea' },
-        { name: 'priority', label: '优先级', type: 'select', options: PRIORITY, value: 'MEDIUM' },
-        { name: 'dueDate', label: '截止日期', type: 'date' },
-        { name: 'clientId', label: '关联客户(可选)', type: 'select', options: [['', '—']].concat(opts) },
-      ], '创建', async function (d) {
-        var body = clean(d); if (body.dueDate) body.dueDate = new Date(body.dueDate).toISOString();
-        await API.post('/tasks', body); closeModal(); toast('任务已创建'); viewTasks();
-      });
-    };
+    $$('#view [data-edit]').forEach(function (b) { b.onclick = function () { var t = r.items.filter(function (x) { return x.id === b.dataset.edit; })[0]; taskFormModal(t); }; });
+    $$('#view [data-del]').forEach(function (b) { b.onclick = function () { confirmDel('删除此任务？', async function () { await API.del('/tasks/' + b.dataset.del); toast('已删除'); viewTasks(); }); }; });
+    bindPager(function (p) { fTasks.page = p; viewTasks(); });
   }
 
+  var fProjects = { page: 1 };
+  async function projectCreateModal() {
+    var opts = await clientOptions();
+    if (!opts.length) { toast('请先创建客户', true); return; }
+    formModal('新建项目', [
+      { name: 'clientId', label: '客户', type: 'select', options: opts },
+      { name: 'projectName', label: '项目名称' },
+      { name: 'description', label: '描述', type: 'textarea' },
+      { name: 'status', label: '状态', type: 'select', options: PROJECT_STATUS, value: 'PENDING' },
+      { name: 'dueDate', label: '截止日期', type: 'date' },
+    ], '创建', async function (d) {
+      var body = clean(d); if (body.dueDate) body.dueDate = new Date(body.dueDate).toISOString();
+      await API.post('/projects', body); closeModal(); toast('项目已创建'); viewProjects();
+    });
+  }
+  function projectEditModal(p) {
+    formModal('编辑项目', [
+      { name: 'projectName', label: '项目名称', value: p.projectName },
+      { name: 'description', label: '描述', type: 'textarea', value: p.description },
+      { name: 'status', label: '状态', type: 'select', options: PROJECT_STATUS, value: p.status },
+      { name: 'dueDate', label: '截止日期', type: 'date', value: p.dueDate ? p.dueDate.slice(0, 10) : '' },
+    ], '保存', async function (d) {
+      var body = clean(d); if (body.dueDate) body.dueDate = new Date(body.dueDate).toISOString();
+      await API.patch('/projects/' + p.id, body); closeModal(); toast('已保存'); viewProjects();
+    });
+  }
   async function viewProjects() {
     loading();
-    var r = await API.get('/projects?pageSize=100');
-    var rows = r.items.map(function (p) {
-      return '<tr><td>' + esc(p.projectName) + '</td><td>' + badge(labelOf(PROJECT_STATUS, p.status), p.status === 'COMPLETED' ? 'green' : 'gold') + '</td><td>' + (p.dueDate ? fmtDay(p.dueDate) : '-') + '</td></tr>';
-    }).join('') || '<tr><td class="empty" colspan="3">暂无项目</td></tr>';
-    setView('<div class="pv-head"><div><h1>项目</h1><p>共 ' + r.total + ' 个</p></div><button class="b primary" id="add">+ 新建项目</button></div>' +
-      '<div class="panel"><table class="tbl"><thead><tr><th>名称</th><th>状态</th><th>截止</th></tr></thead><tbody>' + rows + '</tbody></table></div>');
-    $('#add').onclick = async function () {
-      var opts = await clientOptions();
-      if (!opts.length) { toast('请先创建客户', true); return; }
-      formModal('新建项目', [
-        { name: 'clientId', label: '客户', type: 'select', options: opts },
-        { name: 'projectName', label: '项目名称' },
-        { name: 'description', label: '描述', type: 'textarea' },
-        { name: 'status', label: '状态', type: 'select', options: PROJECT_STATUS, value: 'PENDING' },
-        { name: 'dueDate', label: '截止日期', type: 'date' },
-      ], '创建', async function (d) {
-        var body = clean(d); if (body.dueDate) body.dueDate = new Date(body.dueDate).toISOString();
-        await API.post('/projects', body); closeModal(); toast('项目已创建'); viewProjects();
-      });
-    };
+    var r = await API.get('/projects?page=' + fProjects.page + '&pageSize=15');
+    var body;
+    if (!r.items.length) {
+      body = emptyState('▤', '暂无项目', '把客户的工作拆成项目来推进。', 'add', '+ 新建项目');
+    } else {
+      var rows = r.items.map(function (p) {
+        return '<tr><td>' + esc(p.projectName) + '</td><td>' + badge(labelOf(PROJECT_STATUS, p.status), p.status === 'COMPLETED' ? 'green' : 'gold') + '</td><td>' + (p.dueDate ? fmtDay(p.dueDate) : '-') + '</td><td><div class="rowacts"><button class="b sm" data-edit="' + p.id + '">编辑</button><button class="b sm danger" data-del="' + p.id + '">删</button></div></td></tr>';
+      }).join('');
+      body = '<table class="tbl"><thead><tr><th>名称</th><th>状态</th><th>截止</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>' + pagerHtml(r.total, r.page, r.pageSize);
+    }
+    setView('<div class="pv-head"><div><h1>项目</h1><p>共 ' + r.total + ' 个</p></div><button class="b primary" id="add">+ 新建项目</button></div><div class="panel">' + body + '</div>');
+    var addBtn = $('#add'); if (addBtn) addBtn.onclick = projectCreateModal;
+    $$('#view [data-edit]').forEach(function (b) { b.onclick = function () { projectEditModal(r.items.filter(function (x) { return x.id === b.dataset.edit; })[0]); }; });
+    $$('#view [data-del]').forEach(function (b) { b.onclick = function () { confirmDel('删除此项目？', async function () { await API.del('/projects/' + b.dataset.del); toast('已删除'); viewProjects(); }); }; });
+    bindPager(function (p) { fProjects.page = p; viewProjects(); });
   }
 
   async function viewContracts() {
     loading();
     var r = await API.get('/contracts');
-    var rows = (r.items || []).map(function (c) {
-      var canSend = ['DRAFT', 'SENT', 'VIEWED'].indexOf(c.status) > -1;
-      return '<tr><td>' + esc(c.title) + '</td><td>' + badge(c.status, c.status === 'SIGNED' ? 'green' : 'gold') + '</td><td>' + (canSend ? '<button class="b sm" data-send="' + c.id + '">发送签署</button>' : (c.signedFileUrl ? '<a class="b sm" href="' + API.downloadUrl(c.signedFileUrl) + '" target="_blank">下载</a>' : '')) + '</td></tr>';
-    }).join('') || '<tr><td class="empty" colspan="3">暂无合同</td></tr>';
+    var items = r.items || [];
+    var body;
+    if (!items.length) {
+      body = emptyState('✎', '暂无合同', '从模板生成合同，发送给客户在线签署。', 'add', '+ 新建合同');
+    } else {
+      var rows = items.map(function (c) {
+        var canSend = ['DRAFT', 'SENT', 'VIEWED'].indexOf(c.status) > -1;
+        var acts = '<button class="b sm" data-view="' + c.id + '">查看</button>';
+        if (c.status === 'DRAFT') acts += '<button class="b sm" data-cedit="' + c.id + '">编辑</button>';
+        if (canSend) acts += '<button class="b sm" data-send="' + c.id + '">发送签署</button>';
+        if (c.signedFileUrl) acts += '<button class="b sm" data-dl="' + esc(c.signedFileUrl) + '" data-name="' + esc(c.title) + '.html">下载</button>';
+        if (c.status === 'DRAFT') acts += '<button class="b sm danger" data-del="' + c.id + '">删</button>';
+        return '<tr><td>' + esc(c.title) + '</td><td>' + badge(c.status, c.status === 'SIGNED' ? 'green' : 'gold') + '</td><td><div class="rowacts">' + acts + '</div></td></tr>';
+      }).join('');
+      body = '<table class="tbl"><thead><tr><th>标题</th><th>状态</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+    }
     setView('<div class="pv-head"><div><h1>合同</h1></div><div style="display:flex;gap:8px"><button class="b" id="tpl">模板</button><button class="b primary" id="add">+ 新建合同</button></div></div>' +
-      '<div class="panel"><table class="tbl"><thead><tr><th>标题</th><th>状态</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>');
+      '<div class="panel">' + body + '</div>');
+    function find(id) { return items.filter(function (x) { return x.id === id; })[0]; }
+    $$('#view [data-view]').forEach(function (b) { b.onclick = function () { var c = find(b.dataset.view); openModal(c.title, '<div style="background:#fff;color:#111;border-radius:8px;padding:18px;max-height:60vh;overflow:auto">' + c.contentHtml + '</div>', {}); }; });
+    $$('#view [data-cedit]').forEach(function (b) { b.onclick = function () {
+      var c = find(b.dataset.cedit);
+      formModal('编辑合同', [
+        { name: 'title', label: '标题', value: c.title },
+        { name: 'contentHtml', label: '内容(HTML)', type: 'textarea', value: c.contentHtml },
+      ], '保存', async function (d) { await API.patch('/contracts/' + c.id, d); closeModal(); toast('已保存'); viewContracts(); });
+    }; });
+    $$('#view [data-dl]').forEach(function (b) { b.onclick = async function () { try { await API.download(b.dataset.dl, b.dataset.name); } catch (e) { toast(e.message, true); } }; });
+    $$('#view [data-del]').forEach(function (b) { b.onclick = function () { confirmDel('删除此合同草稿？', async function () { await API.del('/contracts/' + b.dataset.del); toast('已删除'); viewContracts(); }); }; });
     $$('#view [data-send]').forEach(function (b) {
       b.onclick = async function () {
         var res = await API.post('/contracts/' + b.dataset.send + '/send', {});
@@ -279,14 +390,34 @@
   async function viewInvoices() {
     loading();
     var r = await API.get('/invoices');
-    var rows = (r.items || []).map(function (i) {
-      var actions = '';
-      if (i.status === 'DRAFT') actions = '<button class="b sm" data-send="' + i.id + '">发送</button>';
-      else if (i.status !== 'PAID' && i.status !== 'CANCELLED') actions = '<button class="b sm" data-paid="' + i.id + '">标记已付</button>';
-      return '<tr><td>' + esc(i.invoiceNumber) + '</td><td>' + esc(i.currency) + ' ' + esc(i.amount) + '</td><td>' + (i.dueDate ? fmtDay(i.dueDate) : '-') + '</td><td>' + badge(i.status, i.status === 'PAID' ? 'green' : (i.status === 'OVERDUE' ? 'red' : 'gold')) + '</td><td>' + actions + '</td></tr>';
-    }).join('') || '<tr><td class="empty" colspan="5">暂无发票</td></tr>';
-    setView('<div class="pv-head"><div><h1>发票</h1></div><button class="b primary" id="add">+ 新建发票</button></div>' +
-      '<div class="panel"><table class="tbl"><thead><tr><th>编号</th><th>金额</th><th>到期</th><th>状态</th><th></th></tr></thead><tbody>' + rows + '</tbody></table></div>');
+    var items = r.items || [];
+    var body;
+    if (!items.length) {
+      body = emptyState('$', '暂无发票', '生成发票，附带银行转账信息发给客户。', 'add', '+ 新建发票');
+    } else {
+      var rows = items.map(function (i) {
+        var actions = '<button class="b sm" data-detail="' + i.id + '">详情</button>';
+        if (i.status === 'DRAFT') actions += '<button class="b sm" data-send="' + i.id + '">发送</button>';
+        else if (i.status !== 'PAID' && i.status !== 'CANCELLED') actions += '<button class="b sm" data-paid="' + i.id + '">标记已付</button>';
+        if (i.pdfUrl) actions += '<button class="b sm" data-dl="' + esc(i.pdfUrl) + '" data-name="' + esc(i.invoiceNumber) + '.html">下载</button>';
+        return '<tr><td>' + esc(i.invoiceNumber) + '</td><td>' + esc(i.currency) + ' ' + esc(i.amount) + '</td><td>' + (i.dueDate ? fmtDay(i.dueDate) : '-') + '</td><td>' + badge(i.status, i.status === 'PAID' ? 'green' : (i.status === 'OVERDUE' ? 'red' : 'gold')) + '</td><td><div class="rowacts">' + actions + '</div></td></tr>';
+      }).join('');
+      body = '<table class="tbl"><thead><tr><th>编号</th><th>金额</th><th>到期</th><th>状态</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+    }
+    setView('<div class="pv-head"><div><h1>发票</h1></div><button class="b primary" id="add">+ 新建发票</button></div><div class="panel">' + body + '</div>');
+    function find(id) { return items.filter(function (x) { return x.id === id; })[0]; }
+    $$('#view [data-detail]').forEach(function (b) { b.onclick = function () {
+      var i = find(b.dataset.detail);
+      openModal('发票 ' + i.invoiceNumber, '<dl class="kv">' +
+        '<dt>金额</dt><dd>' + esc(i.currency) + ' ' + esc(i.amount) + '</dd>' +
+        '<dt>状态</dt><dd>' + badge(i.status, i.status === 'PAID' ? 'green' : 'gold') + '</dd>' +
+        '<dt>到期</dt><dd>' + (i.dueDate ? fmtDay(i.dueDate) : '-') + '</dd>' +
+        '<dt>账户名</dt><dd>' + esc(i.bankAccountName || '-') + '</dd>' +
+        '<dt>BSB</dt><dd>' + esc(i.bankBsb || '-') + '</dd>' +
+        '<dt>账号</dt><dd>' + esc(i.bankAccountNumber || '-') + '</dd>' +
+        '<dt>付款参考</dt><dd>' + esc(i.paymentReference || '-') + '</dd></dl>', {});
+    }; });
+    $$('#view [data-dl]').forEach(function (b) { b.onclick = async function () { try { await API.download(b.dataset.dl, b.dataset.name); } catch (e) { toast(e.message, true); } }; });
     $$('#view [data-send]').forEach(function (b) { b.onclick = async function () { await API.post('/invoices/' + b.dataset.send + '/send', {}); toast('已发送'); viewInvoices(); }; });
     $$('#view [data-paid]').forEach(function (b) { b.onclick = async function () { await API.post('/invoices/' + b.dataset.paid + '/mark-paid', {}); toast('已标记已付'); viewInvoices(); }; });
     $('#add').onclick = async function () {
@@ -400,9 +531,55 @@
     });
   }
 
+  var fFiles = { clientId: '' };
+  async function uploadModal() {
+    var opts = await clientOptions();
+    var clientSel = '<select name="clientId"><option value="">— 不关联客户 —</option>' + opts.map(function (o) { return '<option value="' + o[0] + '">' + esc(o[1]) + '</option>'; }).join('') + '</select>';
+    var visSel = '<select name="visibility"><option value="INTERNAL_ONLY">仅内部</option><option value="CLIENT_VISIBLE">客户可见</option></select>';
+    openModal('上传文件', '<div class="field"><label>文件</label><input type="file" name="file"/></div>' +
+      '<div class="field"><label>可见性</label>' + visSel + '</div>' +
+      '<div class="field"><label>关联客户(可选)</label>' + clientSel + '</div>', {
+      submitLabel: '上传',
+      onSubmit: async function (host) {
+        var fileEl = $('input[name=file]', host);
+        if (!fileEl.files.length) { toast('请选择文件', true); return; }
+        var fd = new FormData();
+        fd.append('file', fileEl.files[0]);
+        var cl = $('select[name=clientId]', host).value; if (cl) fd.append('clientId', cl);
+        fd.append('visibility', $('select[name=visibility]', host).value);
+        var btn = $('[data-ms]', host); if (btn) btn.disabled = true;
+        try { await API.upload('/files/upload', fd); closeModal(); toast('已上传'); viewFiles(); }
+        catch (e) { toast(e.message, true); if (btn) btn.disabled = false; }
+      },
+    });
+  }
+  async function viewFiles() {
+    loading();
+    var opts = await clientOptions();
+    var r = await API.get('/files' + (fFiles.clientId ? '?clientId=' + fFiles.clientId : ''));
+    var items = r.items || [];
+    var body;
+    if (!items.length && !fFiles.clientId) {
+      body = emptyState('📎', '暂无文件', '上传文件，并标记是否对客户可见。', 'up', '上传文件');
+    } else {
+      var rows = items.map(function (f) {
+        return '<tr><td>' + esc(f.fileName) + '</td><td>' + esc(f.fileType || '-') + '</td><td>' + (f.fileSize ? Math.round(f.fileSize / 1024) + ' KB' : '-') + '</td><td>' + badge(f.visibility === 'CLIENT_VISIBLE' ? '客户可见' : '仅内部', f.visibility === 'CLIENT_VISIBLE' ? 'green' : '') + '</td><td><div class="rowacts"><button class="b sm" data-dl="/api/v1/files/' + f.id + '/download" data-name="' + esc(f.fileName) + '">下载</button><button class="b sm danger" data-del="' + f.id + '">删</button></div></td></tr>';
+      }).join('') || '<tr><td class="empty" colspan="5">没有匹配的文件</td></tr>';
+      body = '<table class="tbl"><thead><tr><th>文件名</th><th>类型</th><th>大小</th><th>可见性</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+    }
+    var clientFilter = '<select id="ff"><option value="">全部客户</option>' + opts.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === fFiles.clientId ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select>';
+    setView('<div class="pv-head"><div><h1>文件</h1></div><button class="b primary" id="up2">上传文件</button></div>' +
+      '<div class="filterbar">' + clientFilter + '</div><div class="panel">' + body + '</div>');
+    var up = $('#up'); if (up) up.onclick = uploadModal;
+    $('#up2').onclick = uploadModal;
+    $('#ff').onchange = function (e) { fFiles.clientId = e.target.value; viewFiles(); };
+    $$('#view [data-dl]').forEach(function (b) { b.onclick = async function () { try { await API.download(b.dataset.dl, b.dataset.name); } catch (e) { toast(e.message, true); } }; });
+    $$('#view [data-del]').forEach(function (b) { b.onclick = function () { confirmDel('删除此文件？', async function () { await API.del('/files/' + b.dataset.del); toast('已删除'); viewFiles(); }); }; });
+  }
+
   // ======================= shell + router =======================
-  var ROUTES = { dashboard: viewDashboard, clients: viewClients, tasks: viewTasks, projects: viewProjects, contracts: viewContracts, invoices: viewInvoices, messages: viewMessages, team: viewTeam, settings: viewSettings };
-  var TITLES = { dashboard: '仪表盘', clients: '客户', tasks: '任务', projects: '项目', contracts: '合同', invoices: '发票', messages: '消息', team: '团队', settings: '设置' };
+  var ROUTES = { dashboard: viewDashboard, clients: viewClients, tasks: viewTasks, projects: viewProjects, files: viewFiles, contracts: viewContracts, invoices: viewInvoices, messages: viewMessages, team: viewTeam, settings: viewSettings };
+  var TITLES = { dashboard: '仪表盘', clients: '客户', tasks: '任务', projects: '项目', files: '文件', contracts: '合同', invoices: '发票', messages: '消息', team: '团队', settings: '设置' };
 
   function setActiveNav(key) {
     $$('#appNav a').forEach(function (a) { a.classList.toggle('active', a.getAttribute('data-nav') === key); });
@@ -448,6 +625,29 @@
       var list = (n.items || []).map(function (x) { return '<li><div class="t">' + esc(x.title) + '</div><div class="d">' + esc(x.message || '') + ' · ' + fmtDate(x.createdAt) + '</div></li>'; }).join('') || '<li class="d">暂无通知</li>';
       openModal('通知', '<ul class="tl">' + list + '</ul>', { submitLabel: '全部已读', onSubmit: async function () { await API.patch('/notifications/read-all', {}); closeModal(); loadBadge(); } });
     };
+    var searchInput = $('#appSearch'), searchRes = $('#searchRes');
+    if (searchInput) {
+      var doSearch = debounce(async function () {
+        var q = searchInput.value.trim();
+        if (q.length < 2) { searchRes.hidden = true; return; }
+        try {
+          var r = await API.get('/search?q=' + encodeURIComponent(q));
+          var html = '';
+          function grp(title, arr, fmt) { if (arr && arr.length) html += '<div class="grp">' + title + '</div>' + arr.map(fmt).join(''); }
+          grp('客户', r.clients, function (c) { return '<a href="#/clients/' + c.id + '">' + esc(c.firstName + ' ' + c.lastName) + '</a>'; });
+          grp('任务', r.tasks, function (t) { return '<a href="#/tasks">' + esc(t.title) + '</a>'; });
+          grp('项目', r.projects, function (p) { return '<a href="#/projects">' + esc(p.projectName) + '</a>'; });
+          grp('合同', r.contracts, function (c) { return '<a href="#/contracts">' + esc(c.title) + '</a>'; });
+          grp('发票', r.invoices, function (i) { return '<a href="#/invoices">' + esc(i.invoiceNumber) + '</a>'; });
+          searchRes.innerHTML = html || '<div class="none">无结果</div>';
+          searchRes.hidden = false;
+        } catch (e) {}
+      }, 300);
+      searchInput.oninput = doSearch;
+      searchInput.onfocus = function () { if (searchInput.value.trim().length >= 2) searchRes.hidden = false; };
+      document.addEventListener('click', function (e) { if (!searchInput.contains(e.target) && !searchRes.contains(e.target)) searchRes.hidden = true; });
+      searchRes.addEventListener('click', function () { searchRes.hidden = true; searchInput.value = ''; });
+    }
     window.addEventListener('hashchange', route);
     if (!location.hash) location.hash = '#/dashboard';
     route();

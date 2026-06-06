@@ -18,6 +18,7 @@
           <a href="#/clients" data-nav="clients"><span class="i">◍</span> 客户</a>
           <a href="#/tasks" data-nav="tasks"><span class="i">✓</span> 任务</a>
           <a href="#/projects" data-nav="projects"><span class="i">▤</span> 项目</a>
+          <a href="#/files" data-nav="files"><span class="i">📎</span> 文件</a>
           <a href="#/contracts" data-nav="contracts"><span class="i">✎</span> 合同</a>
           <a href="#/invoices" data-nav="invoices"><span class="i">$</span> 发票</a>
           <a href="#/messages" data-nav="messages"><span class="i">✉</span> 消息</a>
@@ -33,6 +34,10 @@
         <header class="app-top">
           <button class="app-burger" id="appBurger" aria-label="Menu">☰</button>
           <div class="app-top-title" id="appTitle">仪表盘</div>
+          <div class="app-search">
+            <input id="appSearch" type="search" placeholder="搜索客户 / 任务 / 合同…" autocomplete="off" />
+            <div class="app-search-res" id="searchRes" hidden></div>
+          </div>
           <div class="app-top-right">
             <button class="app-bell" id="appBell" title="通知">🔔<span class="app-bell-dot" id="bellDot" hidden></span></button>
             <div class="app-user" id="appUser"></div>
