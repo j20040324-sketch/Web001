@@ -94,6 +94,8 @@
 .b.primary:hover { color: #0a0a0b; opacity: 0.92; }
 .b.sm { padding: 6px 10px; font-size: 12px; }
 .b.danger:hover { border-color: #e0556a; color: #e0556a; }
+.b:active { transform: translateY(1px); }
+.b:disabled { opacity: 0.5; cursor: default; transform: none; }
 
 /* Stat cards */
 .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 26px; }
@@ -202,6 +204,16 @@
 .rowacts { display: flex; gap: 6px; justify-content: flex-end; }
 
 @media (max-width: 860px) { .app-search { display: none; } }
+@media (max-width: 680px) {
+  .app-view { padding: 16px; }
+  .pv-head h1 { font-size: 21px; }
+  .pv-head { gap: 12px; }
+  /* wide tables scroll horizontally instead of squashing */
+  .tbl { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; }
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .app-top { padding: 0 16px; }
+  .app-top-title { display: none; }
+}
 
 /* Breadcrumb */
 .crumb { font-size: 13px; color: var(--muted); margin-bottom: 6px; }

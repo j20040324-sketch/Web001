@@ -11,7 +11,7 @@
     });
   }
   function setView(h) { $('#view').innerHTML = h; }
-  function loading() { setView('<div class="loading">加载中…</div>'); }
+  function loading() { setView(skel(2) + skel(4)); }
   function toast(msg, err) {
     var t = $('#toast');
     t.textContent = msg;
