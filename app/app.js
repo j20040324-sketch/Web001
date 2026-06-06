@@ -290,10 +290,13 @@
     var dragId = null;
     $$('#dashGrid .dash-cell').forEach(function (cell) {
       cell.ondragstart = function (e) { dragId = cell.getAttribute('data-id'); e.dataTransfer.effectAllowed = 'move'; cell.classList.add('dragging'); };
-      cell.ondragend = function () { cell.classList.remove('dragging'); };
+      cell.ondragend = function () { cell.classList.remove('dragging'); $$('#dashGrid .drop-target').forEach(function (x) { x.classList.remove('drop-target'); }); };
       cell.ondragover = function (e) { e.preventDefault(); };
+      cell.ondragenter = function () { if (cell.getAttribute('data-id') !== dragId) cell.classList.add('drop-target'); };
+      cell.ondragleave = function () { cell.classList.remove('drop-target'); };
       cell.ondrop = function (e) {
         e.preventDefault();
+        cell.classList.remove('drop-target');
         var targetId = cell.getAttribute('data-id');
         if (!dragId || dragId === targetId) return;
         var from = dashState.order.indexOf(dragId);
