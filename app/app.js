@@ -191,9 +191,15 @@
   ];
   var DASH_DEFAULT = ['kpi_clients', 'kpi_projects', 'kpi_overdue_tasks', 'kpi_unpaid', 'revenue', 'chart_clients', 'focus', 'activity'];
   function catTitle(id) { for (var i = 0; i < DASH_CATALOG.length; i++) if (DASH_CATALOG[i].id === id) return DASH_CATALOG[i].title; return id; }
-  function getDash() { try { var v = JSON.parse(localStorage.getItem('novai-dash') || 'null'); if (v && v.order && v.order.length) return v.order.filter(catTitleExists); } catch (e) {} return DASH_DEFAULT.slice(); }
+  function getDashConfig() {
+    try { var v = JSON.parse(localStorage.getItem('novai-dash') || 'null'); if (v && v.order && v.order.length) return { order: v.order.filter(catTitleExists), sizes: v.sizes || {} }; } catch (e) {}
+    return { order: DASH_DEFAULT.slice(), sizes: {} };
+  }
   function catTitleExists(id) { return DASH_CATALOG.some(function (w) { return w.id === id; }); }
-  function saveDash(order) { try { localStorage.setItem('novai-dash', JSON.stringify({ order: order })); } catch (e) {} }
+  function saveDash() { try { localStorage.setItem('novai-dash', JSON.stringify({ order: dashState.order, sizes: dashState.sizes })); } catch (e) {} }
+  function sizeOf(id) { return dashState.sizes[id] || (dashState.widgets[id] ? dashState.widgets[id].size : 'half'); }
+  function sizeLabel(s) { return s === 'kpi' ? '小' : (s === 'full' ? '大' : '中'); }
+  function nextSize(s) { return s === 'kpi' ? 'half' : (s === 'half' ? 'full' : 'kpi'); }
   function panelBars(title, arr) { return '<div class="panel"><h3>' + title + '</h3>' + (arr.length ? bars(arr) : '<p class="loading">暂无数据</p>') + '</div>'; }
 
   function dashWidgets(ctx) {
@@ -240,14 +246,15 @@
   }
 
   // iOS home-screen–style editing: jiggle, drag to reorder, − to remove, + gallery to add.
-  var dashState = { widgets: null, order: null, editing: false };
+  var dashState = { widgets: null, order: null, sizes: {}, editing: false };
 
   function renderDash() {
     var widgets = dashState.widgets, order = dashState.order, editing = dashState.editing;
     var cells = order.filter(function (id) { return widgets[id] && widgets[id].html; }).map(function (id) {
-      var w = widgets[id], cls = w.size === 'kpi' ? 'w-kpi' : (w.size === 'full' ? 'w-full' : 'w-half');
+      var size = sizeOf(id), cls = size === 'kpi' ? 'w-kpi' : (size === 'full' ? 'w-full' : 'w-half');
       return '<div class="dash-cell ' + cls + '" data-id="' + id + '"' + (editing ? ' draggable="true"' : '') + '>' +
-        (editing ? '<button class="rm-badge" data-rm title="移除">−</button>' : '') + w.html + '</div>';
+        (editing ? '<button class="rm-badge" data-rm title="移除">−</button><button class="size-badge" data-size title="切换尺寸（小/中/大）">' + sizeLabel(size) + '</button>' : '') +
+        w.html + '</div>';
     }).join('') || '<p class="loading">没有组件，点「添加组件」。</p>';
     var head = editing
       ? '<div style="display:flex;gap:8px"><button class="b" id="dashAdd">+ 添加组件</button><button class="b primary" id="dashDone">完成</button></div>'
@@ -259,13 +266,21 @@
 
   function bindDash() {
     var c = $('#dashCustomize'); if (c) c.onclick = function () { dashState.editing = true; renderDash(); };
-    var done = $('#dashDone'); if (done) done.onclick = function () { dashState.editing = false; saveDash(dashState.order); renderDash(); };
+    var done = $('#dashDone'); if (done) done.onclick = function () { dashState.editing = false; saveDash(); renderDash(); };
     var add = $('#dashAdd'); if (add) add.onclick = openAddGallery;
     $$('#dashGrid [data-rm]').forEach(function (b) {
       b.onclick = function (e) {
         e.stopPropagation();
         var id = b.closest('.dash-cell').getAttribute('data-id'), i = dashState.order.indexOf(id);
-        if (i > -1) { dashState.order.splice(i, 1); saveDash(dashState.order); renderDash(); }
+        if (i > -1) { dashState.order.splice(i, 1); saveDash(); renderDash(); }
+      };
+    });
+    $$('#dashGrid [data-size]').forEach(function (b) {
+      b.onclick = function (e) {
+        e.stopPropagation();
+        var id = b.closest('.dash-cell').getAttribute('data-id');
+        dashState.sizes[id] = nextSize(sizeOf(id));
+        saveDash(); renderDash();
       };
     });
     if (dashState.editing) wireDashDrag();
@@ -286,7 +301,7 @@
         dashState.order.splice(from, 1);
         var to = dashState.order.indexOf(targetId);
         dashState.order.splice(to < 0 ? dashState.order.length : to, 0, dragId);
-        saveDash(dashState.order);
+        saveDash();
         renderDash();
       };
     });
@@ -299,7 +314,7 @@
       : '<p class="loading">已全部添加</p>';
     openModal('添加组件', body, {});
     $$('#modalHost .add-card').forEach(function (b) {
-      b.onclick = function () { dashState.order.push(b.getAttribute('data-id')); saveDash(dashState.order); closeModal(); renderDash(); };
+      b.onclick = function () { dashState.order.push(b.getAttribute('data-id')); saveDash(); closeModal(); renderDash(); };
     });
   }
 
@@ -314,7 +329,9 @@
     ]);
     var ctx = { m: res[0].metrics, rep: res[1], overdue: res[2], contracts: res[3], invoices: res[4], recent: res[0].recentActivity };
     dashState.widgets = dashWidgets(ctx);
-    dashState.order = getDash().filter(function (id) { return dashState.widgets[id]; });
+    var cfg = getDashConfig();
+    dashState.order = cfg.order.filter(function (id) { return dashState.widgets[id]; });
+    dashState.sizes = cfg.sizes || {};
     dashState.editing = false;
     renderDash();
   }
