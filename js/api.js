@@ -30,10 +30,23 @@
     try { return localStorage.getItem('novai-refresh') || ''; } catch (e) { return ''; }
   }
 
-  async function jsonFetch(path, opts) {
+  async function jsonFetch(path, opts, _retries) {
     opts = opts || {};
     opts.headers = Object.assign({ 'content-type': 'application/json' }, opts.headers || {});
-    var res = await fetch(url(path), opts);
+    var res;
+    try {
+      res = await fetch(url(path), opts);
+    } catch (netErr) {
+      // Network error — most often the free backend is cold-starting. Retry.
+      var left = _retries == null ? 3 : _retries;
+      if (left > 0) {
+        await new Promise(function (r) { setTimeout(r, 2500); });
+        return jsonFetch(path, opts, left - 1);
+      }
+      var ne = new Error('服务器正在唤醒（免费服务器会休眠），请等约 1 分钟后再试一次。');
+      ne.network = true;
+      throw ne;
+    }
     var data = null;
     try { data = await res.json(); } catch (e) {}
     if (!res.ok) {
@@ -45,6 +58,9 @@
     }
     return data;
   }
+
+  // Warm the backend as soon as this page loads so it's awake by submit time.
+  try { fetch(API_BASE + '/health', { cache: 'no-store' }).catch(function () {}); } catch (e) {}
 
   async function register(payload) {
     var d = await jsonFetch('/auth/register', { method: 'POST', body: JSON.stringify(payload) });
