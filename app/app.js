@@ -1570,6 +1570,13 @@
       document.addEventListener('click', function (e) { if (!searchInput.contains(e.target) && !searchRes.contains(e.target)) searchRes.hidden = true; });
       searchRes.addEventListener('click', function () { searchRes.hidden = true; searchInput.value = ''; });
     }
+    document.addEventListener('keydown', function (e) {
+      if ((e.metaKey || e.ctrlKey) && String(e.key).toLowerCase() === 'k') {
+        var s = $('#appSearch'); if (s && s.style.display !== 'none') { e.preventDefault(); s.focus(); }
+      } else if (e.key === 'Escape') {
+        var m = $('#modalHost'); if (m && m.classList.contains('open')) closeModal();
+      }
+    });
     window.addEventListener('hashchange', route);
     if (!location.hash) location.hash = window.PORTAL ? '#/overview' : '#/dashboard';
     route();
