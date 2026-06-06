@@ -249,6 +249,8 @@
 .board-card { background: var(--bg-3); border: 1px solid var(--line-soft); border-radius: 8px; padding: 10px 12px; margin-bottom: 9px; cursor: pointer; font-size: 13.5px; }
 .board-card:hover { border-color: var(--accent); }
 .board-card .sub { color: var(--muted); font-size: 12px; margin-top: 3px; }
+.board-col.drop { border-color: var(--accent); background: rgba(201,169,106,0.06); }
+.board-col h4 span { color: var(--fg); }
 
 /* segmented toggle */
 .seg { display: inline-flex; border: 1px solid var(--line-soft); border-radius: 7px; overflow: hidden; }

@@ -53,6 +53,18 @@
       '<button data-pg="' + (page + 1) + '"' + (page >= pages ? ' disabled' : '') + '>下一页</button></div>';
   }
   function bindPager(reload) { $$('#view [data-pg]').forEach(function (b) { b.onclick = function () { reload(parseInt(b.dataset.pg, 10)); }; }); }
+  // Wire HTML5 drag-and-drop on a kanban board. onMove(id, columnStatus).
+  function wireBoard(onMove) {
+    $$('#view .board-card[draggable]').forEach(function (card) {
+      card.ondragstart = function (e) { e.dataTransfer.setData('text/id', card.dataset.id); e.dataTransfer.effectAllowed = 'move'; card.style.opacity = '0.4'; };
+      card.ondragend = function () { card.style.opacity = ''; };
+    });
+    $$('#view .board-col').forEach(function (col) {
+      col.ondragover = function (e) { e.preventDefault(); col.classList.add('drop'); };
+      col.ondragleave = function () { col.classList.remove('drop'); };
+      col.ondrop = function (e) { e.preventDefault(); col.classList.remove('drop'); var id = e.dataTransfer.getData('text/id'); var status = col.dataset.status; if (id && status) onMove(id, status); };
+    });
+  }
   function confirmDel(msg, fn) {
     openModal('确认删除', '<p style="font-size:14px;color:var(--muted)">' + esc(msg) + '</p>', {
       submitLabel: '删除',
@@ -270,7 +282,7 @@
       '<div class="panel"><h3>项目状态</h3>' + (projectBars.length ? bars(projectBars) : '<p class="loading">暂无数据</p>') + '</div></div>');
   }
 
-  var fClients = { search: '', status: '', page: 1 };
+  var fClients = { search: '', status: '', page: 1, view: 'list' };
   function addClientModal() {
     formModal('新建客户', [
       { name: 'firstName', label: '名' }, { name: 'lastName', label: '姓' },
@@ -281,7 +293,32 @@
       await API.post('/clients', clean(data)); closeModal(); toast('客户已创建'); fClients.page = 1; viewClients();
     });
   }
+  function clientsHead(total) {
+    return '<div class="pv-head"><div><h1>客户</h1><p>共 ' + total + ' 位</p></div>' +
+      '<div style="display:flex;gap:10px;align-items:center"><div class="seg"><button data-v="list"' + (fClients.view === 'list' ? ' class="active"' : '') + '>列表</button><button data-v="board"' + (fClients.view === 'board' ? ' class="active"' : '') + '>看板</button></div>' +
+      '<button class="b primary" id="add">+ 新建客户</button></div></div>';
+  }
+  function bindClientsHead() {
+    $$('#view .seg button').forEach(function (b) { b.onclick = function () { fClients.view = b.dataset.v; viewClients(); }; });
+    var addBtn = $('#add'); if (addBtn) addBtn.onclick = addClientModal;
+  }
+  async function clientsBoard() {
+    loading();
+    var r = await API.get('/clients?pageSize=200');
+    var cols = CLIENT_STATUS.map(function (s) {
+      var inCol = r.items.filter(function (c) { return c.status === s[0]; });
+      var cards = inCol.map(function (c) {
+        return '<div class="board-card" draggable="true" data-id="' + c.id + '"><div>' + esc(c.firstName + ' ' + c.lastName) + '</div>' + (c.email ? '<div class="sub">' + esc(c.email) + '</div>' : '') + '</div>';
+      }).join('');
+      return '<div class="board-col" data-status="' + s[0] + '"><h4>' + s[1] + '<span>' + inCol.length + '</span></h4>' + cards + '</div>';
+    }).join('');
+    setView(clientsHead(r.items.length) + '<div class="board">' + cols + '</div>');
+    bindClientsHead();
+    $$('#view .board-card').forEach(function (card) { card.onclick = function () { location.hash = '#/clients/' + card.dataset.id; }; });
+    wireBoard(async function (id, status) { try { await API.patch('/clients/' + id, { status: status }); toast('已更新状态'); clientsBoard(); } catch (e) { toast(e.message, true); } });
+  }
   async function viewClients() {
+    if (fClients.view === 'board') return clientsBoard();
     loading();
     var qs = '?page=' + fClients.page + '&pageSize=10';
     if (fClients.search) qs += '&search=' + encodeURIComponent(fClients.search);
@@ -297,11 +334,11 @@
       }).join('') || '<tr><td class="empty" colspan="4">没有匹配的客户</td></tr>';
       body = '<table class="tbl"><thead><tr><th>姓名</th><th>邮箱</th><th>电话</th><th>状态</th></tr></thead><tbody>' + rows + '</tbody></table>' + pagerHtml(r.total, r.page, r.pageSize);
     }
-    setView('<div class="pv-head"><div><h1>客户</h1><p>共 ' + r.total + ' 位</p></div><button class="b primary" id="add">+ 新建客户</button></div>' +
+    setView(clientsHead(r.total) +
       '<div class="filterbar"><input type="search" id="cq" placeholder="搜索姓名 / 邮箱 / 公司…" value="' + esc(fClients.search) + '"/><select id="cs">' + statusOpts + '</select></div>' +
       '<div class="panel">' + body + '</div>');
+    bindClientsHead();
     $$('#view tr.clickable').forEach(function (tr) { tr.onclick = function () { location.hash = '#/clients/' + tr.dataset.id; }; });
-    var addBtn = $('#add'); if (addBtn) addBtn.onclick = addClientModal;
     $('#cq').oninput = debounce(function (e) { fClients.search = e.target.value.trim(); fClients.page = 1; viewClients(); }, 350);
     $('#cs').onchange = function (e) { fClients.status = e.target.value; fClients.page = 1; viewClients(); };
     bindPager(function (p) { fClients.page = p; viewClients(); });
@@ -392,7 +429,31 @@
     };
   }
 
-  var fTasks = { status: '', page: 1 };
+  var fTasks = { status: '', page: 1, view: 'list' };
+  function tasksHead(total) {
+    return '<div class="pv-head"><div><h1>任务</h1><p>共 ' + total + ' 项</p></div>' +
+      '<div style="display:flex;gap:10px;align-items:center"><div class="seg"><button data-v="list"' + (fTasks.view === 'list' ? ' class="active"' : '') + '>列表</button><button data-v="board"' + (fTasks.view === 'board' ? ' class="active"' : '') + '>看板</button></div>' +
+      '<button class="b primary" id="add">+ 新建任务</button></div></div>';
+  }
+  function bindTasksHead() {
+    $$('#view .seg button').forEach(function (b) { b.onclick = function () { fTasks.view = b.dataset.v; viewTasks(); }; });
+    var addBtn = $('#add'); if (addBtn) addBtn.onclick = function () { taskFormModal(null); };
+  }
+  async function tasksBoard() {
+    loading();
+    var r = await API.get('/tasks?pageSize=200');
+    var cols = TASK_STATUS.map(function (s) {
+      var inCol = r.items.filter(function (t) { return t.status === s[0]; });
+      var cards = inCol.map(function (t) {
+        return '<div class="board-card" draggable="true" data-id="' + t.id + '"><div>' + esc(t.title) + '</div><div class="sub">' + badge(labelOf(PRIORITY, t.priority), t.priority === 'URGENT' || t.priority === 'HIGH' ? 'red' : '') + (t.dueDate ? ' · ' + fmtDay(t.dueDate) : '') + '</div></div>';
+      }).join('');
+      return '<div class="board-col" data-status="' + s[0] + '"><h4>' + s[1] + '<span>' + inCol.length + '</span></h4>' + cards + '</div>';
+    }).join('');
+    setView(tasksHead(r.items.length) + '<div class="board">' + cols + '</div>');
+    bindTasksHead();
+    $$('#view .board-card').forEach(function (card) { card.onclick = function () { var t = r.items.filter(function (x) { return x.id === card.dataset.id; })[0]; taskFormModal(t); }; });
+    wireBoard(async function (id, status) { try { await API.patch('/tasks/' + id, { status: status }); toast('已更新'); tasksBoard(); } catch (e) { toast(e.message, true); } });
+  }
   function taskFormModal(task) {
     var t = task || {};
     formModal(task ? '编辑任务' : '新建任务', [
@@ -409,6 +470,7 @@
     });
   }
   async function viewTasks() {
+    if (fTasks.view === 'board') return tasksBoard();
     loading();
     var qs = '?page=' + fTasks.page + '&pageSize=15';
     if (fTasks.status) qs += '&status=' + fTasks.status;
@@ -426,10 +488,10 @@
       }).join('') || '<tr><td class="empty" colspan="5">没有匹配的任务</td></tr>';
       body = '<table class="tbl"><thead><tr><th>标题</th><th>状态</th><th>优先级</th><th>截止</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>' + pagerHtml(r.total, r.page, r.pageSize);
     }
-    setView('<div class="pv-head"><div><h1>任务</h1><p>共 ' + r.total + ' 项</p></div><button class="b primary" id="add">+ 新建任务</button></div>' +
+    setView(tasksHead(r.total) +
       '<div class="filterbar"><select id="ts">' + statusOpts + '</select></div>' +
       '<div class="panel">' + body + '</div>');
-    var addBtn = $('#add'); if (addBtn) addBtn.onclick = function () { taskFormModal(null); };
+    bindTasksHead();
     $('#ts').onchange = function (e) { fTasks.status = e.target.value; fTasks.page = 1; viewTasks(); };
     $$('#view [data-done]').forEach(function (b) { b.onclick = async function () { await API.patch('/tasks/' + b.dataset.done, { status: 'DONE' }); toast('已完成'); viewTasks(); }; });
     $$('#view [data-edit]').forEach(function (b) { b.onclick = function () { var t = r.items.filter(function (x) { return x.id === b.dataset.edit; })[0]; taskFormModal(t); }; });
