@@ -245,107 +245,116 @@
     };
   }
 
-  // iOS home-screen–style editing: jiggle, drag to reorder, − to remove, + gallery to add.
-  var dashState = { widgets: null, order: null, sizes: {}, editing: false, sizePopFor: null };
+  // iOS home-screen–style editing. All edit actions mutate the DOM in place
+  // (no full re-render) so there's never a flicker/screen-switch — CSS handles
+  // the jiggle and the add/remove motion.
+  var dashState = { widgets: null, order: null, sizes: {}, editing: false, sizePopFor: null, dragEl: null };
 
-  function renderDash() {
-    var widgets = dashState.widgets, order = dashState.order, editing = dashState.editing;
-    var cells = order.filter(function (id) { return widgets[id] && widgets[id].html; }).map(function (id) {
-      var w = widgets[id], size = sizeOf(id), cls = size === 'kpi' ? 'w-kpi' : (size === 'full' ? 'w-full' : 'w-half');
-      var popOpen = editing && dashState.sizePopFor === id;
-      var badges = '';
-      if (editing) {
-        badges = '<button class="rm-badge" data-rm title="移除">−</button>' +
-          '<button class="size-badge" data-size title="调整尺寸">' + sizeLabel(size) + '</button>' +
-          (popOpen ? '<div class="size-pop">' + ['kpi', 'half', 'full'].map(function (sz) {
-            return '<button data-sz="' + sz + '"' + (sz === size ? ' class="active"' : '') + '>' + sizeLabel(sz) + '</button>';
-          }).join('') + '</div>' : '');
-      }
-      return '<div class="dash-cell ' + cls + (popOpen ? ' pop-open' : '') + '" data-id="' + id + '"' + (editing ? ' draggable="true"' : '') + '>' + badges + w.html + '</div>';
-    }).join('') || '<p class="loading">没有组件，点「添加组件」。</p>';
-    var head = editing
-      ? '<div style="display:flex;gap:8px"><button class="b" id="dashAdd">+ 添加组件</button><button class="b primary" id="dashDone">完成</button></div>'
-      : '<button class="b" id="dashCustomize">自定义</button>';
-    setView('<div class="pv-head"><div><h1>仪表盘</h1><p>' + (editing ? '拖动排序 · 点 − 移除 · 添加组件' : '今天需要关注的事项') + '</p></div>' + head + '</div>' +
-      '<div class="dash-grid' + (editing ? ' editing' : '') + '" id="dashGrid">' + cells + '</div>');
-    bindDash();
+  function sizeClass(size) { return size === 'kpi' ? 'w-kpi' : (size === 'full' ? 'w-full' : 'w-half'); }
+  function dashCellHtml(id) {
+    var w = dashState.widgets[id]; if (!w || !w.html) return '';
+    var size = sizeOf(id);
+    return '<div class="dash-cell ' + sizeClass(size) + '" data-id="' + id + '" draggable="' + (dashState.editing ? 'true' : 'false') + '">' +
+      '<button class="rm-badge" data-rm title="移除">−</button>' +
+      '<button class="size-badge" data-size title="尺寸">' + sizeLabel(size) + '</button>' + w.html + '</div>';
   }
 
-  function bindDash() {
-    var c = $('#dashCustomize'); if (c) c.onclick = function () { dashState.editing = true; dashState.sizePopFor = null; renderDash(); };
-    var done = $('#dashDone'); if (done) done.onclick = function () { dashState.editing = false; dashState.sizePopFor = null; saveDash(); renderDash(); };
-    var add = $('#dashAdd'); if (add) add.onclick = openAddGallery;
-    $$('#dashGrid [data-rm]').forEach(function (b) {
-      b.onclick = function (e) {
-        e.stopPropagation();
-        var id = b.closest('.dash-cell').getAttribute('data-id'), i = dashState.order.indexOf(id);
-        if (i > -1) { dashState.order.splice(i, 1); dashState.sizePopFor = null; saveDash(); renderDash(); }
-      };
-    });
-    $$('#dashGrid [data-size]').forEach(function (b) {
-      b.onclick = function (e) {
-        e.stopPropagation();
-        var id = b.closest('.dash-cell').getAttribute('data-id');
-        dashState.sizePopFor = dashState.sizePopFor === id ? null : id; // toggle the size menu
-        renderDash();
-      };
-    });
-    $$('#dashGrid [data-sz]').forEach(function (b) {
-      b.onclick = function (e) {
-        e.stopPropagation();
-        var id = b.closest('.dash-cell').getAttribute('data-id');
-        dashState.sizes[id] = b.getAttribute('data-sz');
-        dashState.sizePopFor = null;
-        saveDash(); renderDash();
-      };
-    });
-    if (dashState.editing) wireDashDrag();
+  // Full render — only when first opening the dashboard.
+  function renderDash() {
+    var order = dashState.order.filter(function (id) { return dashState.widgets[id] && dashState.widgets[id].html; });
+    var cells = order.map(dashCellHtml).join('') || '<p class="loading">没有组件，点「自定义 → 添加组件」。</p>';
+    setView('<div class="pv-head"><div><h1>仪表盘</h1><p id="dashSub">今天需要关注的事项</p></div>' +
+      '<div id="dashActions"><button class="b" id="dashCustomize">自定义</button></div></div>' +
+      '<div class="dash-grid' + (dashState.editing ? ' editing' : '') + '" id="dashGrid">' + cells + '</div>');
+    $('#dashCustomize').onclick = enterEdit;
+    bindDashGrid();
     $('#view').onclick = onDashBlankClick;
   }
 
-  // Click anywhere that isn't a control: closes the size menu if open, else
-  // exits edit mode (iOS-like). Dragging doesn't fire a click, so reordering
-  // is unaffected.
-  function onDashBlankClick(e) {
-    if (!$('#dashGrid') || !dashState.editing) return; // only on dashboard in edit mode
-    if (e.target.closest('.pv-head') || e.target.closest('.rm-badge') || e.target.closest('.size-badge') || e.target.closest('.size-pop')) return;
-    if (dashState.sizePopFor) { dashState.sizePopFor = null; renderDash(); return; }
-    dashState.editing = false; saveDash(); renderDash();
+  function bindDashGrid() {
+    var grid = $('#dashGrid');
+    grid.addEventListener('click', function (e) {
+      var rm = e.target.closest('[data-rm]'); if (rm) { e.stopPropagation(); removeWidget(rm.closest('.dash-cell')); return; }
+      var sb = e.target.closest('[data-size]'); if (sb) { e.stopPropagation(); toggleSizePop(sb.closest('.dash-cell')); return; }
+      var sz = e.target.closest('[data-sz]'); if (sz) { e.stopPropagation(); setSize(sz.closest('.dash-cell'), sz.getAttribute('data-sz')); return; }
+    });
+    grid.addEventListener('dragstart', function (e) { var c = e.target.closest('.dash-cell'); if (!c || !dashState.editing) return; dashState.dragEl = c; e.dataTransfer.effectAllowed = 'move'; c.classList.add('dragging'); });
+    grid.addEventListener('dragover', function (e) { if (!dashState.dragEl) return; e.preventDefault(); var c = e.target.closest('.dash-cell'); $$('#dashGrid .drop-target').forEach(function (x) { if (x !== c) x.classList.remove('drop-target'); }); if (c && c !== dashState.dragEl) c.classList.add('drop-target'); });
+    grid.addEventListener('drop', function (e) { if (!dashState.dragEl) return; e.preventDefault(); var c = e.target.closest('.dash-cell'); if (c && c !== dashState.dragEl) { grid.insertBefore(dashState.dragEl, c); rebuildOrderFromDom(); saveDash(); } });
+    grid.addEventListener('dragend', function () { if (dashState.dragEl) dashState.dragEl.classList.remove('dragging'); dashState.dragEl = null; $$('#dashGrid .drop-target').forEach(function (x) { x.classList.remove('drop-target'); }); });
+  }
+  function rebuildOrderFromDom() { dashState.order = $$('#dashGrid .dash-cell').map(function (c) { return c.getAttribute('data-id'); }); }
+
+  function enterEdit() {
+    dashState.editing = true;
+    $('#dashGrid').classList.add('editing');
+    $$('#dashGrid .dash-cell').forEach(function (c) { c.setAttribute('draggable', 'true'); });
+    $('#dashActions').innerHTML = '<button class="b" id="dashAdd">+ 添加组件</button><button class="b primary" id="dashDone">完成</button>';
+    $('#dashAdd').onclick = openAddGallery;
+    $('#dashDone').onclick = exitEdit;
+    $('#dashSub').textContent = '拖动排序 · 调尺寸 · 移除';
+  }
+  function exitEdit() {
+    dashState.editing = false; closeSizePop();
+    var grid = $('#dashGrid'); if (grid) { grid.classList.remove('editing'); $$('#dashGrid .dash-cell').forEach(function (c) { c.setAttribute('draggable', 'false'); }); }
+    $('#dashActions').innerHTML = '<button class="b" id="dashCustomize">自定义</button>';
+    $('#dashCustomize').onclick = enterEdit;
+    $('#dashSub').textContent = '今天需要关注的事项';
+    saveDash();
   }
 
-  function wireDashDrag() {
-    var dragId = null;
-    $$('#dashGrid .dash-cell').forEach(function (cell) {
-      cell.ondragstart = function (e) { dragId = cell.getAttribute('data-id'); e.dataTransfer.effectAllowed = 'move'; cell.classList.add('dragging'); };
-      cell.ondragend = function () { cell.classList.remove('dragging'); $$('#dashGrid .drop-target').forEach(function (x) { x.classList.remove('drop-target'); }); };
-      cell.ondragover = function (e) { e.preventDefault(); };
-      cell.ondragenter = function () { if (cell.getAttribute('data-id') !== dragId) cell.classList.add('drop-target'); };
-      cell.ondragleave = function () { cell.classList.remove('drop-target'); };
-      cell.ondrop = function (e) {
-        e.preventDefault();
-        cell.classList.remove('drop-target');
-        var targetId = cell.getAttribute('data-id');
-        if (!dragId || dragId === targetId) return;
-        var from = dashState.order.indexOf(dragId);
-        if (from < 0) return;
-        dashState.order.splice(from, 1);
-        var to = dashState.order.indexOf(targetId);
-        dashState.order.splice(to < 0 ? dashState.order.length : to, 0, dragId);
-        saveDash();
-        renderDash();
-      };
-    });
+  function toggleSizePop(cell) {
+    var id = cell.getAttribute('data-id');
+    if (dashState.sizePopFor === id) { closeSizePop(); return; }
+    closeSizePop();
+    dashState.sizePopFor = id; cell.classList.add('pop-open');
+    var size = sizeOf(id), pop = document.createElement('div');
+    pop.className = 'size-pop';
+    pop.innerHTML = ['kpi', 'half', 'full'].map(function (sz) { return '<button data-sz="' + sz + '"' + (sz === size ? ' class="active"' : '') + '>' + sizeLabel(sz) + '</button>'; }).join('');
+    cell.appendChild(pop);
+  }
+  function closeSizePop() {
+    dashState.sizePopFor = null;
+    $$('#dashGrid .size-pop').forEach(function (p) { p.remove(); });
+    $$('#dashGrid .pop-open').forEach(function (c) { c.classList.remove('pop-open'); });
+  }
+  function setSize(cell, sz) {
+    dashState.sizes[cell.getAttribute('data-id')] = sz;
+    cell.classList.remove('w-kpi', 'w-half', 'w-full');
+    cell.classList.add(sizeClass(sz));
+    var b = cell.querySelector('.size-badge'); if (b) b.textContent = sizeLabel(sz);
+    closeSizePop(); saveDash();
+  }
+  function removeWidget(cell) {
+    var id = cell.getAttribute('data-id'), i = dashState.order.indexOf(id);
+    if (i > -1) dashState.order.splice(i, 1);
+    closeSizePop();
+    cell.classList.add('removing');
+    setTimeout(function () { cell.remove(); saveDash(); }, 200);
+  }
+
+  function onDashBlankClick(e) {
+    if (!$('#dashGrid') || !dashState.editing) return;
+    if (e.target.closest('.rm-badge') || e.target.closest('.size-badge') || e.target.closest('.size-pop') || e.target.closest('#dashActions')) return;
+    if (dashState.sizePopFor) { closeSizePop(); return; }
+    exitEdit();
   }
 
   function openAddGallery() {
     var avail = DASH_CATALOG.filter(function (w) { return dashState.order.indexOf(w.id) < 0; });
-    var body = avail.length
-      ? '<div class="add-gallery">' + avail.map(function (w) { return '<button class="add-card" data-id="' + w.id + '">' + esc(w.title) + '</button>'; }).join('') + '</div>'
-      : '<p class="loading">已全部添加</p>';
+    var body = avail.length ? '<div class="add-gallery">' + avail.map(function (w) { return '<button class="add-card" data-id="' + w.id + '">' + esc(w.title) + '</button>'; }).join('') + '</div>' : '<p class="loading">已全部添加</p>';
     openModal('添加组件', body, {});
-    $$('#modalHost .add-card').forEach(function (b) {
-      b.onclick = function () { dashState.order.push(b.getAttribute('data-id')); saveDash(); closeModal(); renderDash(); };
-    });
+    $$('#modalHost .add-card').forEach(function (b) { b.onclick = function () { addWidget(b.getAttribute('data-id')); closeModal(); }; });
+  }
+  function addWidget(id) {
+    if (dashState.order.indexOf(id) > -1) return;
+    dashState.order.push(id);
+    var grid = $('#dashGrid'); if (!grid) return;
+    var empty = grid.querySelector('.loading'); if (empty) empty.remove();
+    var tmp = document.createElement('div'); tmp.innerHTML = dashCellHtml(id);
+    var cell = tmp.firstChild;
+    if (cell) { cell.classList.add('adding'); grid.appendChild(cell); }
+    saveDash();
   }
 
   async function viewDashboard() {
