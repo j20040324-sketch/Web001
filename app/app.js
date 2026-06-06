@@ -60,6 +60,40 @@
     });
     var b = $('#modalHost [data-ms]'); if (b) b.classList.add('danger');
   }
+  function money(n) { var v = Number(n) || 0; return '$' + v.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function breadcrumb(items) {
+    return '<nav class="crumb">' + items.map(function (it, i) {
+      var last = i === items.length - 1;
+      return last ? '<span>' + esc(it.label) + '</span>' : '<a href="' + it.href + '">' + esc(it.label) + '</a><span class="sep">/</span>';
+    }).join('') + '</nav>';
+  }
+  function skel(lines) {
+    var s = '';
+    for (var i = 0; i < (lines || 4); i++) s += '<div class="sk"' + (i === 0 ? ' style="width:40%"' : (i === (lines || 4) - 1 ? ' style="width:65%"' : '')) + '></div>';
+    return '<div class="panel">' + s + '</div>';
+  }
+  // SVG donut from [{label,value,color}]
+  function donut(segments, size) {
+    size = size || 150;
+    var r = size / 2 - 14, cx = size / 2, cy = size / 2, circ = 2 * Math.PI * r;
+    var total = segments.reduce(function (a, s) { return a + s.value; }, 0) || 1;
+    var off = 0;
+    var circles = segments.filter(function (s) { return s.value > 0; }).map(function (s) {
+      var len = s.value / total * circ;
+      var c = '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + s.color + '" stroke-width="14" stroke-dasharray="' + len + ' ' + (circ - len) + '" stroke-dashoffset="' + (-off) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')"/>';
+      off += len; return c;
+    }).join('');
+    var legend = segments.map(function (s) { return '<div class="lg"><span class="dot" style="background:' + s.color + '"></span>' + esc(s.label) + ' <b>' + s.value + '</b></div>'; }).join('');
+    return '<div class="chart-donut"><svg width="' + size + '" height="' + size + '" viewBox="0 0 ' + size + ' ' + size + '">' + circles +
+      '<text x="' + cx + '" y="' + cy + '" text-anchor="middle" dominant-baseline="central" fill="var(--fg)" font-size="22" font-family="Sora">' + total + '</text></svg><div class="lgs">' + legend + '</div></div>';
+  }
+  function bars(items) {
+    var max = Math.max.apply(null, items.map(function (i) { return i.value; }).concat([1]));
+    return '<div class="bars">' + items.map(function (i) {
+      return '<div class="bar-row"><span class="bl">' + esc(i.label) + '</span><div class="bt"><div class="bf" style="width:' + (i.value / max * 100) + '%;background:' + (i.color || 'var(--accent)') + '"></div></div><span class="bv">' + i.value + '</span></div>';
+    }).join('') + '</div>';
+  }
+  var CHART = { gold: '#c9a96a', green: '#4cd07d', red: '#e0556a', blue: '#6aa9ff', gray: '#666' };
 
   // ---- option sets ----
   var CLIENT_STATUS = [
@@ -124,26 +158,116 @@
 
   // ======================= VIEWS =======================
 
+  function kpi(icon, n, label, warn) {
+    return '<div class="kpi' + (warn ? ' warn' : '') + '"><div class="ic">' + icon + '</div><div><div class="n">' + n + '</div><div class="l">' + esc(label) + '</div></div></div>';
+  }
+  function focusItem(href, title, meta) { return '<a href="' + href + '"><span>' + esc(title) + '</span><span class="meta">' + esc(meta) + '</span></a>'; }
+  function sumVals(o) { return Object.keys(o || {}).reduce(function (a, k) { return a + o[k]; }, 0); }
+
   async function viewDashboard() {
-    loading();
-    var d = await API.get('/dashboard');
+    setView(skel(3) + skel(5));
+    var res = await Promise.all([
+      API.get('/dashboard'),
+      API.get('/reports/summary').catch(function () { return null; }),
+      API.get('/tasks?overdue=true&pageSize=6').catch(function () { return { items: [] }; }),
+      API.get('/contracts').catch(function () { return { items: [] }; }),
+      API.get('/invoices').catch(function () { return { items: [] }; }),
+      API.get('/payment-settings').catch(function () { return {}; }),
+      API.get('/members').catch(function () { return { members: [], pendingInvitations: [] }; }),
+    ]);
+    var d = res[0], rep = res[1], overdue = res[2], contracts = res[3], invoices = res[4], pay = res[5], team = res[6];
     var m = d.metrics;
-    var cards = [
-      ['新增客户·今日', m.newClientsToday], ['未读消息', m.unreadMessages, m.unreadMessages > 0],
-      ['待发合同', m.pendingContracts], ['未签合同', m.unsignedContracts],
-      ['逾期发票', m.overdueInvoices, m.overdueInvoices > 0], ['未付发票', m.unpaidInvoices],
-      ['进行中项目', m.activeProjects], ['今日到期任务', m.tasksDueToday, m.tasksDueToday > 0],
-      ['逾期任务', m.tasksOverdue, m.tasksOverdue > 0],
+
+    // ---- onboarding checklist ----
+    var clientsTotal = rep ? sumVals(rep.clientsByStatus) : 0;
+    var tasksTotal = rep ? sumVals(rep.tasksByStatus) : 0;
+    var steps = [
+      { done: clientsTotal > 0, label: '添加第一位客户', href: '#/clients' },
+      { done: tasksTotal > 0, label: '创建一个任务', href: '#/tasks' },
+      { done: !!pay.accountNumber, label: '设置收款信息', href: '#/settings' },
+      { done: (team.members || []).length > 1 || (team.pendingInvitations || []).length > 0, label: '邀请团队成员', href: '#/team' },
     ];
-    var grid = cards.map(function (c) {
-      return '<div class="stat-card' + (c[2] ? ' warn' : '') + '"><div class="n">' + c[1] + '</div><div class="l">' + esc(c[0]) + '</div></div>';
-    }).join('');
+    var allDone = steps.every(function (s) { return s.done; });
+    var checklistHtml = allDone ? '' :
+      '<div class="panel"><h3>快速上手（' + steps.filter(function (s) { return s.done; }).length + '/' + steps.length + '）</h3><div class="checklist">' +
+      steps.map(function (s) { return '<a class="ck ' + (s.done ? 'done' : '') + '" href="' + s.href + '"><span class="box">✓</span><span>' + esc(s.label) + '</span>' + (s.done ? '' : '<span class="go">前往 →</span>') + '</a>'; }).join('') +
+      '</div></div>';
+
+    // ---- KPIs ----
+    var kpis = '<div class="kpi-grid">' +
+      kpi('◍', clientsTotal, '客户总数') +
+      kpi('▤', m.activeProjects, '进行中项目') +
+      kpi('⚠', m.tasksOverdue, '逾期任务', m.tasksOverdue > 0) +
+      kpi('$', m.unpaidInvoices + m.overdueInvoices, '待收发票', (m.unpaidInvoices + m.overdueInvoices) > 0) +
+      '</div>';
+
+    // ---- charts ----
+    var charts = '';
+    if (rep) {
+      var inv = rep.invoicesByStatus;
+      var invSeg = [
+        { label: '已付', value: inv.PAID || 0, color: CHART.green },
+        { label: '未付', value: (inv.UNPAID || 0) + (inv.SENT || 0), color: CHART.gold },
+        { label: '逾期', value: inv.OVERDUE || 0, color: CHART.red },
+        { label: '草稿', value: (inv.DRAFT || 0) + (inv.CANCELLED || 0), color: CHART.gray },
+      ];
+      var cb = rep.clientsByStatus;
+      var clientBars = CLIENT_STATUS.map(function (s) { return { label: s[1], value: cb[s[0]] || 0, color: CHART.gold }; }).filter(function (b) { return b.value > 0; });
+      charts = '<div class="grid2">' +
+        '<div class="panel"><h3>收入概览</h3>' +
+        '<div style="display:flex;gap:24px;margin-bottom:16px"><div><div class="l" style="color:var(--muted);font-size:12px">已收</div><div style="font-family:Sora;font-size:22px;color:' + CHART.green + '">' + money(rep.revenue.paid) + '</div></div>' +
+        '<div><div class="l" style="color:var(--muted);font-size:12px">待收</div><div style="font-family:Sora;font-size:22px;color:' + CHART.gold + '">' + money(rep.revenue.outstanding) + '</div></div></div>' +
+        donut(invSeg) + '</div>' +
+        '<div class="panel"><h3>客户分布</h3>' + (clientBars.length ? bars(clientBars) : '<p class="loading">暂无客户</p>') + '</div></div>';
+    }
+
+    // ---- today's focus ----
+    var unsigned = (contracts.items || []).filter(function (c) { return c.status === 'SENT' || c.status === 'VIEWED'; }).slice(0, 5);
+    var unpaid = (invoices.items || []).filter(function (i) { return ['UNPAID', 'OVERDUE', 'SENT'].indexOf(i.status) > -1; }).slice(0, 5);
+    var focus = '';
+    (overdue.items || []).slice(0, 5).forEach(function (t) { focus += focusItem('#/tasks', '🔴 ' + t.title, '逾期 · ' + (t.dueDate ? fmtDay(t.dueDate) : '')); });
+    unsigned.forEach(function (c) { focus += focusItem('#/contracts', '✎ ' + c.title, '待签署'); });
+    unpaid.forEach(function (i) { focus += focusItem('#/invoices', '$ ' + i.invoiceNumber, money(i.amount) + ' · ' + labelOfInvoice(i.status)); });
+    if (!focus) focus = '<p class="loading">没有待办事项，一切顺利 🎉</p>';
+
     var tl = (d.recentActivity || []).map(function (e) {
       return '<li><div class="t">' + esc(e.title) + '</div><div class="d">' + fmtDate(e.createdAt) + (e.description ? ' · ' + esc(e.description) : '') + '</div></li>';
     }).join('') || '<li class="d">暂无动态</li>';
+
     setView('<div class="pv-head"><div><h1>仪表盘</h1><p>今天需要关注的事项</p></div></div>' +
-      '<div class="stat-grid">' + grid + '</div>' +
-      '<div class="panel"><h3>最近动态</h3><ul class="tl">' + tl + '</ul></div>');
+      checklistHtml + kpis + charts +
+      '<div class="grid2"><div class="panel"><h3>今日待办</h3><div class="focus">' + focus + '</div></div>' +
+      '<div class="panel"><h3>最近动态</h3><ul class="tl">' + tl + '</ul></div></div>');
+  }
+  function labelOfInvoice(s) { var m = { DRAFT: '草稿', SENT: '已发送', UNPAID: '未付', PAID: '已付', OVERDUE: '逾期', CANCELLED: '已取消' }; return m[s] || s; }
+
+  var CONTRACT_LABEL = { DRAFT: '草稿', SENT: '已发送', VIEWED: '已查看', SIGNED: '已签署', CANCELLED: '已取消', EXPIRED: '已过期' };
+  async function viewReports() {
+    setView(skel(3) + skel(4));
+    var rep = await API.get('/reports/summary');
+    var inv = rep.invoicesByStatus, cb = rep.clientsByStatus, ct = rep.contractsByStatus, tk = rep.tasksByStatus, pj = rep.projectsByStatus;
+    var invSeg = [
+      { label: '已付', value: inv.PAID || 0, color: CHART.green },
+      { label: '未付', value: (inv.UNPAID || 0) + (inv.SENT || 0), color: CHART.gold },
+      { label: '逾期', value: inv.OVERDUE || 0, color: CHART.red },
+      { label: '草稿/取消', value: (inv.DRAFT || 0) + (inv.CANCELLED || 0), color: CHART.gray },
+    ];
+    var clientBars = CLIENT_STATUS.map(function (s) { return { label: s[1], value: cb[s[0]] || 0, color: CHART.gold }; }).filter(function (b) { return b.value > 0; });
+    var contractBars = Object.keys(CONTRACT_LABEL).map(function (k) { return { label: CONTRACT_LABEL[k], value: ct[k] || 0, color: k === 'SIGNED' ? CHART.green : CHART.gold }; }).filter(function (b) { return b.value > 0; });
+    var projectBars = PROJECT_STATUS.map(function (s) { return { label: s[1], value: pj[s[0]] || 0, color: s[0] === 'COMPLETED' ? CHART.green : CHART.gold }; }).filter(function (b) { return b.value > 0; });
+    var totalTasks = sumVals(tk), completion = totalTasks ? Math.round((tk.DONE || 0) / totalTasks * 100) : 0;
+
+    setView('<div class="pv-head"><div><h1>报表 / 洞察</h1><p>业务关键指标一览</p></div></div>' +
+      '<div class="kpi-grid">' +
+      kpi('$', money(rep.revenue.paid), '已收款') +
+      kpi('$', money(rep.revenue.outstanding), '待收款', rep.revenue.outstanding > 0) +
+      kpi('✎', rep.contractSignRate + '%', '合同签署率') +
+      kpi('✓', completion + '%', '任务完成率') +
+      '</div>' +
+      '<div class="grid2"><div class="panel"><h3>发票状态</h3>' + donut(invSeg) + '</div>' +
+      '<div class="panel"><h3>客户分布</h3>' + (clientBars.length ? bars(clientBars) : '<p class="loading">暂无数据</p>') + '</div></div>' +
+      '<div class="grid2"><div class="panel"><h3>合同状态</h3>' + (contractBars.length ? bars(contractBars) : '<p class="loading">暂无数据</p>') + '</div>' +
+      '<div class="panel"><h3>项目状态</h3>' + (projectBars.length ? bars(projectBars) : '<p class="loading">暂无数据</p>') + '</div></div>');
   }
 
   var fClients = { search: '', status: '', page: 1 };
@@ -184,25 +308,61 @@
   }
 
   async function viewClientDetail(id) {
-    loading();
+    setView(skel(2) + skel(5));
     var c = await API.get('/clients/' + id);
-    var tlRes = await API.get('/clients/' + id + '/timeline');
-    var tags = (c.tagRelations || []).map(function (t) { return badge(t.tag.name, 'gold'); }).join(' ') || '<span class="badge">无</span>';
-    var tl = (tlRes.items || []).map(function (e) {
-      return '<li><div class="t">' + esc(e.title) + '</div><div class="d">' + fmtDate(e.createdAt) + (e.description ? ' · ' + esc(e.description) : '') + '</div></li>';
-    }).join('') || '<li class="d">暂无记录</li>';
+    var name = c.firstName + ' ' + c.lastName;
+    var TABS = [['overview', '概览'], ['projects', '项目'], ['tasks', '任务'], ['contracts', '合同'], ['invoices', '发票'], ['files', '文件']];
     setView(
-      '<div class="pv-head"><div><a class="app-side-link" href="#/clients">← 客户列表</a><h1>' + esc(c.firstName + ' ' + c.lastName) + '</h1></div>' +
-      '<div style="display:flex;gap:8px"><button class="b" id="note">+ 备注</button><button class="b" id="edit">编辑</button><button class="b danger" id="del">删除</button><button class="b primary" id="invite">邀请门户</button></div></div>' +
-      '<div class="detail"><div class="panel"><h3>时间线</h3><ul class="tl">' + tl + '</ul></div>' +
-      '<div><div class="panel"><h3>资料</h3><dl class="kv">' +
-      '<dt>状态</dt><dd>' + statusBadge(c.status) + '</dd>' +
-      '<dt>邮箱</dt><dd>' + esc(c.email || '-') + '</dd>' +
-      '<dt>电话</dt><dd>' + esc(c.phone || '-') + '</dd>' +
-      '<dt>公司</dt><dd>' + esc(c.companyName || '-') + '</dd>' +
-      '<dt>来源</dt><dd>' + esc(c.source || '-') + '</dd>' +
-      '<dt>标签</dt><dd>' + tags + '</dd>' +
-      '<dt>备注</dt><dd>' + esc(c.notes || '-') + '</dd></dl></div></div></div>');
+      breadcrumb([{ label: '客户', href: '#/clients' }, { label: name }]) +
+      '<div class="pv-head"><div><h1>' + esc(name) + '</h1><p>' + statusBadge(c.status) + (c.companyName ? ' · ' + esc(c.companyName) : '') + '</p></div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="b" id="note">+ 备注</button><button class="b" id="edit">编辑</button><button class="b danger" id="del">删除</button><button class="b primary" id="invite">邀请门户</button></div></div>' +
+      '<div class="tabs" id="ctabs">' + TABS.map(function (t) { return '<button data-tab="' + t[0] + '"' + (t[0] === 'overview' ? ' class="active"' : '') + '>' + t[1] + '</button>'; }).join('') + '</div>' +
+      '<div id="tabc"></div>');
+
+    function tableWrap(head, rows, emptyMsg) {
+      if (!rows) return '<div class="panel"><p class="loading">' + esc(emptyMsg) + '</p></div>';
+      return '<div class="panel"><table class="tbl"><thead><tr>' + head + '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+    }
+    async function loadTab(t) {
+      var host = $('#tabc'); host.innerHTML = '<div class="loading">加载中…</div>';
+      try {
+        if (t === 'overview') {
+          var tlRes = await API.get('/clients/' + id + '/timeline');
+          var tags = (c.tagRelations || []).map(function (x) { return badge(x.tag.name, 'gold'); }).join(' ') || '<span class="badge">无</span>';
+          var tl = (tlRes.items || []).map(function (e) { return '<li><div class="t">' + esc(e.title) + '</div><div class="d">' + fmtDate(e.createdAt) + (e.description ? ' · ' + esc(e.description) : '') + '</div></li>'; }).join('') || '<li class="d">暂无记录</li>';
+          host.innerHTML = '<div class="detail"><div class="panel"><h3>时间线</h3><ul class="tl">' + tl + '</ul></div>' +
+            '<div class="panel"><h3>资料</h3><dl class="kv">' +
+            '<dt>状态</dt><dd>' + statusBadge(c.status) + '</dd><dt>邮箱</dt><dd>' + esc(c.email || '-') + '</dd>' +
+            '<dt>电话</dt><dd>' + esc(c.phone || '-') + '</dd><dt>公司</dt><dd>' + esc(c.companyName || '-') + '</dd>' +
+            '<dt>来源</dt><dd>' + esc(c.source || '-') + '</dd><dt>标签</dt><dd>' + tags + '</dd>' +
+            '<dt>备注</dt><dd>' + esc(c.notes || '-') + '</dd></dl></div></div>';
+        } else if (t === 'projects') {
+          var r = await API.get('/projects?clientId=' + id + '&pageSize=50');
+          var rows = (r.items || []).map(function (p) { return '<tr><td>' + esc(p.projectName) + '</td><td>' + badge(labelOf(PROJECT_STATUS, p.status), p.status === 'COMPLETED' ? 'green' : 'gold') + '</td><td>' + (p.dueDate ? fmtDay(p.dueDate) : '-') + '</td></tr>'; }).join('');
+          host.innerHTML = tableWrap('<th>名称</th><th>状态</th><th>截止</th>', rows, '暂无项目');
+        } else if (t === 'tasks') {
+          var r2 = await API.get('/tasks?clientId=' + id + '&pageSize=50');
+          var rows2 = (r2.items || []).map(function (x) { return '<tr><td>' + esc(x.title) + '</td><td>' + badge(labelOf(TASK_STATUS, x.status), x.status === 'DONE' ? 'green' : '') + '</td><td>' + badge(labelOf(PRIORITY, x.priority)) + '</td><td>' + (x.dueDate ? fmtDay(x.dueDate) : '-') + '</td></tr>'; }).join('');
+          host.innerHTML = tableWrap('<th>标题</th><th>状态</th><th>优先级</th><th>截止</th>', rows2, '暂无任务');
+        } else if (t === 'contracts') {
+          var r3 = await API.get('/contracts?clientId=' + id);
+          var rows3 = (r3.items || []).map(function (x) { return '<tr><td>' + esc(x.title) + '</td><td>' + badge(x.status, x.status === 'SIGNED' ? 'green' : 'gold') + '</td><td>' + (x.signedFileUrl ? '<button class="b sm" data-dl="' + esc(x.signedFileUrl) + '" data-name="' + esc(x.title) + '.html">下载</button>' : '') + '</td></tr>'; }).join('');
+          host.innerHTML = tableWrap('<th>标题</th><th>状态</th><th></th>', rows3, '暂无合同');
+        } else if (t === 'invoices') {
+          var r4 = await API.get('/invoices?clientId=' + id);
+          var rows4 = (r4.items || []).map(function (x) { return '<tr><td>' + esc(x.invoiceNumber) + '</td><td>' + money(x.amount) + '</td><td>' + badge(x.status, x.status === 'PAID' ? 'green' : (x.status === 'OVERDUE' ? 'red' : 'gold')) + '</td><td>' + (x.pdfUrl ? '<button class="b sm" data-dl="' + esc(x.pdfUrl) + '" data-name="' + esc(x.invoiceNumber) + '.html">下载</button>' : '') + '</td></tr>'; }).join('');
+          host.innerHTML = tableWrap('<th>编号</th><th>金额</th><th>状态</th><th></th>', rows4, '暂无发票');
+        } else if (t === 'files') {
+          var r5 = await API.get('/files?clientId=' + id);
+          var rows5 = (r5.items || []).map(function (x) { return '<tr><td>' + esc(x.fileName) + '</td><td>' + badge(x.visibility === 'CLIENT_VISIBLE' ? '客户可见' : '仅内部', x.visibility === 'CLIENT_VISIBLE' ? 'green' : '') + '</td><td><button class="b sm" data-dl="/api/v1/files/' + x.id + '/download" data-name="' + esc(x.fileName) + '">下载</button></td></tr>'; }).join('');
+          host.innerHTML = tableWrap('<th>文件名</th><th>可见性</th><th></th>', rows5, '暂无文件');
+        }
+        $$('#tabc [data-dl]').forEach(function (b) { b.onclick = async function () { try { await API.download(b.dataset.dl, b.dataset.name); } catch (e) { toast(e.message, true); } }; });
+      } catch (e) { host.innerHTML = '<div class="loading">出错：' + esc(e.message) + '</div>'; }
+    }
+    $$('#ctabs button').forEach(function (b) { b.onclick = function () { $$('#ctabs button').forEach(function (x) { x.classList.remove('active'); }); b.classList.add('active'); loadTab(b.dataset.tab); }; });
+    loadTab('overview');
+
     $('#note').onclick = function () {
       formModal('添加备注', [{ name: 'note', label: '备注内容', type: 'textarea' }], '保存', async function (d) {
         if (!d.note) return; await API.post('/clients/' + id + '/notes', { note: d.note }); closeModal(); toast('已添加'); viewClientDetail(id);
@@ -578,8 +738,8 @@
   }
 
   // ======================= shell + router =======================
-  var ROUTES = { dashboard: viewDashboard, clients: viewClients, tasks: viewTasks, projects: viewProjects, files: viewFiles, contracts: viewContracts, invoices: viewInvoices, messages: viewMessages, team: viewTeam, settings: viewSettings };
-  var TITLES = { dashboard: '仪表盘', clients: '客户', tasks: '任务', projects: '项目', files: '文件', contracts: '合同', invoices: '发票', messages: '消息', team: '团队', settings: '设置' };
+  var ROUTES = { dashboard: viewDashboard, clients: viewClients, tasks: viewTasks, projects: viewProjects, files: viewFiles, contracts: viewContracts, invoices: viewInvoices, messages: viewMessages, reports: viewReports, team: viewTeam, settings: viewSettings };
+  var TITLES = { dashboard: '仪表盘', clients: '客户', tasks: '任务', projects: '项目', files: '文件', contracts: '合同', invoices: '发票', messages: '消息', reports: '报表', team: '团队', settings: '设置' };
 
   function setActiveNav(key) {
     $$('#appNav a').forEach(function (a) { a.classList.toggle('active', a.getAttribute('data-nav') === key); });
