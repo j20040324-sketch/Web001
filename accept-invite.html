@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-year="2026"
+  data-title-zh="接受邀请 — NOVAI Flow"
+  data-title-en="Accept invitation — NOVAI Flow">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="接受 NOVAI Flow 邀请。" />
+    <link rel="stylesheet" href="css/style.css" />
+    <script src="js/main.js" defer></script>
+    <script src="js/site.js" defer></script>
+    <script src="js/api.js" defer></script>
+    <title>接受邀请 — NOVAI Flow</title>
+  </head>
+  <body>
+    <div class="auth">
+      <aside class="auth-visual bg-home">
+        <a class="brand" href="index.html">NOVAI</a>
+        <div class="pitch">
+          <h2 data-en="Join your<br />team">加入<br />团队</h2>
+          <p data-en="Set your password to access your workspace and start collaborating.">
+            设置密码，进入你的工作区，开始协作。
+          </p>
+        </div>
+      </aside>
+
+      <main class="auth-main">
+        <div class="auth-card">
+          <div class="auth-top">
+            <a class="home-link" href="index.html" data-en="← Back to home">← 返回首页</a>
+          </div>
+
+          <h1 data-en="Accept invitation">接受邀请</h1>
+          <p class="auth-sub" id="inviteSub" data-en="Loading invitation…">正在加载邀请…</p>
+
+          <div class="auth-msg" id="authMsg"></div>
+
+          <form id="acceptForm" novalidate hidden>
+            <div class="auth-field" id="nameFields">
+              <label for="name" data-en="Full name">姓名</label>
+              <input id="name" type="text" autocomplete="name" placeholder="你的名字" data-en-placeholder="Your name" />
+            </div>
+            <div class="auth-field">
+              <label for="password" id="pwLabel" data-en="Set a password">设置密码</label>
+              <div class="auth-pass">
+                <input id="password" type="password" autocomplete="new-password" placeholder="至少 8 位" data-en-placeholder="At least 8 characters" />
+                <button type="button" class="toggle" data-toggle="password" data-en="Show">显示</button>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-accent btn-full" data-en="Join">加入</button>
+          </form>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      (function () {
+        var lang = function () { return document.documentElement.lang === 'en' ? 'en' : 'zh'; };
+        function q(id) { return document.getElementById(id); }
+        var token = new URLSearchParams(location.search).get('token') || '';
+        var msg = q('authMsg');
+        function show(t) { msg.textContent = t; msg.classList.add('show'); }
+        var userExists = false;
+
+        document.querySelectorAll('.toggle[data-toggle]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var input = q(btn.getAttribute('data-toggle'));
+            if (!input) return;
+            var showing = input.type === 'password';
+            input.type = showing ? 'text' : 'password';
+            btn.textContent = showing ? (lang() === 'en' ? 'Hide' : '隐藏') : (lang() === 'en' ? 'Show' : '显示');
+          });
+        });
+
+        function start() {
+          if (!window.NovaiApi) { setTimeout(start, 300); return; }
+          if (!token) { q('inviteSub').textContent = lang() === 'en' ? 'Invalid invitation link.' : '邀请链接无效。'; return; }
+          window.NovaiApi.getInvitation(token).then(function (inv) {
+            userExists = !!inv.userExists;
+            q('inviteSub').textContent = (lang() === 'en' ? 'You are invited to join ' : '你被邀请加入 ') + (inv.companyName || '') + ' · ' + inv.role;
+            if (userExists) {
+              q('nameFields').hidden = true;
+              q('pwLabel').textContent = lang() === 'en' ? 'Your existing account password' : '你现有账号的密码';
+            }
+            q('acceptForm').hidden = false;
+          }).catch(function (err) {
+            q('inviteSub').textContent = err.message || (lang() === 'en' ? 'Invitation not found or expired.' : '邀请不存在或已过期。');
+          });
+        }
+        start();
+
+        q('acceptForm').addEventListener('submit', function (e) {
+          e.preventDefault();
+          var pw = q('password').value;
+          if (pw.length < 8) { show(lang() === 'en' ? 'Password must be at least 8 characters.' : '密码至少 8 位。'); return; }
+          var name = (q('name').value || '').trim();
+          var parts = name.split(/\s+/);
+          var payload = {
+            firstName: userExists ? '-' : (parts[0] || name || '-'),
+            lastName: userExists ? '-' : (parts.slice(1).join(' ') || '-'),
+            password: pw,
+          };
+          if (!userExists && !name) { show(lang() === 'en' ? 'Please enter your name.' : '请输入姓名。'); return; }
+          var btn = e.target.querySelector('button[type=submit]');
+          if (btn) btn.disabled = true;
+          window.NovaiApi.acceptInvitation(token, payload).then(function () {
+            show(lang() === 'en' ? 'Joined! Redirecting…' : '已加入，正在进入…');
+            setTimeout(function () { location.href = 'app/index.html'; }, 700);
+          }).catch(function (err) { if (btn) btn.disabled = false; show(err.message); });
+        });
+      })();
+    </script>
+  </body>
+</html>

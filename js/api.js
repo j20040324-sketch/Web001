@@ -91,6 +91,14 @@
   async function resetPassword(token, password) {
     return jsonFetch('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token: token, password: password }) });
   }
+  async function getInvitation(token) {
+    return jsonFetch('/public/invitations/' + encodeURIComponent(token), { method: 'GET' });
+  }
+  async function acceptInvitation(token, payload) {
+    var d = await jsonFetch('/public/invitations/' + encodeURIComponent(token) + '/accept', { method: 'POST', body: JSON.stringify(payload) });
+    setTokens(d);
+    return d;
+  }
 
   // Authenticated request helper (adds the Bearer token).
   function authed(path, opts) {
@@ -107,6 +115,8 @@
     logout: logout,
     forgotPassword: forgotPassword,
     resetPassword: resetPassword,
+    getInvitation: getInvitation,
+    acceptInvitation: acceptInvitation,
     authed: authed,
     getAccess: getAccess,
     clearTokens: clearTokens,

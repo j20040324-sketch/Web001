@@ -35,6 +35,12 @@
   function copy(text) {
     navigator.clipboard.writeText(text).then(function () { toast('已复制到剪贴板'); }, function () {});
   }
+  // Turn a backend invite URL into a front-end accept-invite link on this host.
+  function acceptLink(backendUrl) {
+    var token = '';
+    try { token = new URL(backendUrl).searchParams.get('token') || ''; } catch (e) { var m = (backendUrl || '').match(/token=([^&]+)/); token = m ? m[1] : ''; }
+    return location.href.split('/app/')[0] + '/accept-invite.html?token=' + encodeURIComponent(token);
+  }
   function badge(text, cls) { return '<span class="badge ' + (cls || '') + '">' + esc(text) + '</span>'; }
   function debounce(fn, ms) {
     var t;
@@ -543,7 +549,8 @@
     $('#invite').onclick = async function () {
       try {
         var r = await API.post('/clients/' + id + '/invite', {});
-        openModal('客户门户邀请链接', '<p style="color:var(--muted);font-size:14px;margin-bottom:10px">把链接发给客户，他设置密码后即可登录门户：</p><div class="field"><input value="' + esc(r.inviteUrl) + '" readonly id="lnk"/></div>', { submitLabel: '复制链接', onSubmit: function () { copy(r.inviteUrl); } });
+        var link = acceptLink(r.inviteUrl);
+        openModal('客户门户邀请链接', '<p style="color:var(--muted);font-size:14px;margin-bottom:10px">把链接发给客户，他设置密码后即可登录门户：</p><div class="field"><input value="' + esc(link) + '" readonly id="lnk"/></div>', { submitLabel: '复制链接', onSubmit: function () { copy(link); } });
       } catch (e) { toast(e.message, true); }
     };
     $('#del').onclick = function () {
@@ -929,7 +936,8 @@
         { name: 'role', label: '角色', type: 'select', options: ROLES, value: 'STAFF' },
       ], '生成邀请', async function (d) {
         var res = await API.post('/members/invite', { email: d.email, role: d.role });
-        openModal('邀请链接', '<p style="color:var(--muted);font-size:14px;margin-bottom:10px">把链接发给对方加入团队：</p><div class="field"><input value="' + esc(res.inviteUrl) + '" readonly/></div>', { submitLabel: '复制', onSubmit: function () { copy(res.inviteUrl); } });
+        var ilink = acceptLink(res.inviteUrl);
+        openModal('邀请链接', '<p style="color:var(--muted);font-size:14px;margin-bottom:10px">把链接发给对方加入团队：</p><div class="field"><input value="' + esc(ilink) + '" readonly/></div>', { submitLabel: '复制', onSubmit: function () { copy(ilink); } });
         viewTeam();
       });
     };
