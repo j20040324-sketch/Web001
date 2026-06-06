@@ -1282,6 +1282,39 @@
     $('#addTpl').onclick = function () { formModal('新建邮件模板', [{ name: 'name', label: '模板名称' }, { name: 'subject', label: '邮件主题' }, { name: 'bodyHtml', label: '内容(HTML，支持 {{client_name}} 等)', type: 'textarea' }], '创建', async function (d) { await API.post('/email-templates', d); closeModal(); toast('已创建'); viewEmail(); }); };
   }
 
+  // ---- Audit logs ----
+  var AUDIT_ENTITIES = ['', 'client', 'contract', 'invoice', 'project', 'task', 'report', 'file', 'integration', 'workflow', 'member', 'mailbox', 'announcement'];
+  var fAudit = { page: 1, entityType: '', action: '' };
+  async function viewAudit() {
+    loading();
+    var qs = '?page=' + fAudit.page + '&pageSize=30';
+    if (fAudit.entityType) qs += '&entityType=' + encodeURIComponent(fAudit.entityType);
+    if (fAudit.action) qs += '&action=' + encodeURIComponent(fAudit.action);
+    var r;
+    try { r = await API.get('/audit-logs' + qs); }
+    catch (e) {
+      setView('<div class="pv-head"><div><h1>审计日志</h1></div></div><div class="panel"><p class="loading">' + (e.status === 403 ? '需要管理员权限查看审计日志。' : esc(e.message)) + '</p></div>');
+      return;
+    }
+    var items = r.items || [];
+    var rows = items.map(function (a) { return '<tr class="clickable" data-id="' + a.id + '"><td>' + esc(a.action) + '</td><td>' + esc(a.entityType || '-') + '</td><td>' + fmtDate(a.createdAt) + '</td></tr>'; }).join('') || '<tr><td class="empty" colspan="3">暂无记录</td></tr>';
+    var entOpts = AUDIT_ENTITIES.map(function (e) { return '<option value="' + e + '"' + (e === fAudit.entityType ? ' selected' : '') + '>' + (e || '全部实体') + '</option>'; }).join('');
+    setView('<div class="pv-head"><div><h1>审计日志</h1><p>共 ' + r.total + ' 条</p></div></div>' +
+      '<div class="filterbar"><input type="search" id="aq" placeholder="搜索动作，如 invoice.send" value="' + esc(fAudit.action) + '"/><select id="ae">' + entOpts + '</select></div>' +
+      '<div class="panel"><table class="tbl"><thead><tr><th>动作</th><th>实体</th><th>时间</th></tr></thead><tbody>' + rows + '</tbody></table>' + pagerHtml(r.total, r.page, r.pageSize) + '</div>');
+    $('#aq').oninput = debounce(function (e) { fAudit.action = e.target.value.trim(); fAudit.page = 1; viewAudit(); }, 350);
+    $('#ae').onchange = function (e) { fAudit.entityType = e.target.value; fAudit.page = 1; viewAudit(); };
+    bindPager(function (p) { fAudit.page = p; viewAudit(); });
+    $$('#view tr.clickable').forEach(function (tr) {
+      tr.onclick = function () {
+        var a = items.filter(function (x) { return x.id === tr.dataset.id; })[0];
+        function pre(v) { return v == null ? '<span style="color:var(--muted)">—</span>' : '<pre style="white-space:pre-wrap;font-size:12px;background:var(--bg-3);padding:10px;border-radius:8px;overflow:auto;max-height:30vh">' + esc(JSON.stringify(v, null, 2)) + '</pre>'; }
+        openModal(a.action, '<dl class="kv"><dt>实体</dt><dd>' + esc(a.entityType || '-') + (a.entityId ? ' · ' + esc(a.entityId).slice(0, 8) : '') + '</dd><dt>时间</dt><dd>' + fmtDate(a.createdAt) + '</dd><dt>IP</dt><dd>' + esc(a.ip || a.ipAddress || '-') + '</dd></dl>' +
+          '<div style="margin-top:10px"><div style="color:var(--muted);font-size:12px;margin-bottom:4px">旧值</div>' + pre(a.oldValue) + '<div style="color:var(--muted);font-size:12px;margin:8px 0 4px">新值</div>' + pre(a.newValue) + '</div>', {});
+      };
+    });
+  }
+
   // ======================= CLIENT PORTAL =======================
   function dl(pdfUrl, name) { return pdfUrl ? '<button class="b sm" data-pdl="' + esc(pdfUrl) + '" data-pn="' + esc(name) + '">下载</button>' : ''; }
   function bindPortalDownloads() { $$('#view [data-pdl]').forEach(function (b) { b.onclick = async function () { try { await API.download(b.dataset.pdl, b.dataset.pn); } catch (e) { toast(e.message, true); } }; }); }
@@ -1376,8 +1409,8 @@
   }
 
   // ======================= shell + router =======================
-  var ROUTES = { dashboard: viewDashboard, clients: viewClients, tasks: viewTasks, projects: viewProjects, files: viewFiles, contracts: viewContracts, invoices: viewInvoices, messages: viewMessages, report: viewReportDocs, reports: viewReports, automations: viewAutomations, integrations: viewIntegrations, announcements: viewAnnouncements, email: viewEmail, team: viewTeam, settings: viewSettings, account: viewAccount };
-  var TITLES = { dashboard: '仪表盘', clients: '客户', tasks: '任务', projects: '项目', files: '文件', contracts: '合同', invoices: '发票', messages: '消息', report: '报告', reports: '报表', automations: '自动化', integrations: '集成', announcements: '公告', email: '邮箱', team: '团队', settings: '设置', account: '个人信息' };
+  var ROUTES = { dashboard: viewDashboard, clients: viewClients, tasks: viewTasks, projects: viewProjects, files: viewFiles, contracts: viewContracts, invoices: viewInvoices, messages: viewMessages, report: viewReportDocs, reports: viewReports, automations: viewAutomations, integrations: viewIntegrations, announcements: viewAnnouncements, email: viewEmail, team: viewTeam, settings: viewSettings, audit: viewAudit, account: viewAccount };
+  var TITLES = { dashboard: '仪表盘', clients: '客户', tasks: '任务', projects: '项目', files: '文件', contracts: '合同', invoices: '发票', messages: '消息', report: '报告', reports: '报表', automations: '自动化', integrations: '集成', announcements: '公告', email: '邮箱', team: '团队', settings: '设置', audit: '审计日志', account: '个人信息' };
 
   var currentKey = 'dashboard';
   function setActiveNav(key) {
