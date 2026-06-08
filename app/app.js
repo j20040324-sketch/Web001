@@ -51,6 +51,11 @@
       '<div class="s">' + esc(sub || '') + '</div>' +
       (btnId ? '<button class="b primary" id="' + btnId + '">' + esc(btnLabel) + '</button>' : '') + '</div>';
   }
+  function errorState(msg) {
+    return '<div class="empty-state"><div class="ico">⚠️</div><div class="t">出错了</div>' +
+      '<div class="s">' + esc(msg || '加载失败，请重试') + '</div>' +
+      '<button class="b" id="retryBtn">重试</button></div>';
+  }
   function pagerHtml(total, page, pageSize) {
     var pages = Math.max(1, Math.ceil(total / pageSize));
     if (total <= pageSize) return '';
@@ -74,7 +79,8 @@
   function confirmDel(msg, fn) {
     openModal('确认删除', '<p style="font-size:14px;color:var(--muted)">' + esc(msg) + '</p>', {
       submitLabel: '删除',
-      onSubmit: async function () { try { await fn(); closeModal(); } catch (e) { toast(e.message, true); } },
+      busyLabel: '删除中…',
+      onSubmit: async function () { await fn(); closeModal(); },
     });
     var b = $('#modalHost [data-ms]'); if (b) b.classList.add('danger');
   }
@@ -143,7 +149,21 @@
     h.className = 'app-modal-host open';
     $('.app-modal-back', h).onclick = closeModal;
     $('[data-mc]', h).onclick = closeModal;
-    if (opts.onSubmit) $('[data-ms]', h).onclick = function () { opts.onSubmit(h); };
+    if (opts.onSubmit) {
+      var sb = $('[data-ms]', h);
+      sb.onclick = async function () {
+        var orig = sb.textContent;
+        sb.disabled = true; sb.textContent = opts.busyLabel || '处理中…';
+        try { await opts.onSubmit(h); }
+        catch (e) { toast((e && e.message) || '操作失败', true); }
+        if (document.body.contains(sb)) { sb.disabled = false; sb.textContent = orig; }
+      };
+    }
+    // Enter submits when typing in a form field; auto-focus the first editable field.
+    var form = $('[data-mform]', h);
+    if (form) form.onsubmit = function (e) { e.preventDefault(); var b = $('[data-ms]', h); if (b && !b.disabled) b.click(); };
+    var first = $('.m-body input:not([readonly]):not([type=hidden]):not([type=checkbox]), .m-body textarea, .m-body select', h);
+    if (first) setTimeout(function () { try { first.focus(); } catch (e) {} }, 30);
     return h;
   }
   function fieldHtml(f) {
@@ -158,13 +178,10 @@
   }
   function collect(host) { var d = {}; $$('[name]', host).forEach(function (el) { d[el.name] = el.value; }); return d; }
   function formModal(title, fields, submitLabel, onSubmit) {
-    openModal(title, fields.map(fieldHtml).join(''), {
+    openModal(title, '<form data-mform>' + fields.map(fieldHtml).join('') + '</form>', {
       submitLabel: submitLabel || '保存',
-      onSubmit: async function (host) {
-        var btn = $('[data-ms]', host); if (btn) btn.disabled = true;
-        try { await onSubmit(collect(host)); }
-        catch (e) { toast(e.message, true); if (btn) btn.disabled = false; }
-      },
+      busyLabel: '保存中…',
+      onSubmit: function (host) { return onSubmit(collect(host)); },
     });
   }
 
@@ -1506,7 +1523,8 @@
       await fn(parts.slice(1));
     } catch (e) {
       if (e && e.status === 401) return;
-      setView('<div class="loading">出错了：' + esc(e.message) + '</div>');
+      setView(errorState(e && e.message));
+      var rb = $('#retryBtn'); if (rb) rb.onclick = route;
     }
   }
 
@@ -1583,5 +1601,6 @@
     if (!location.hash) location.hash = window.PORTAL ? '#/overview' : '#/dashboard';
     route();
     loadBadge();
+    setInterval(loadBadge, 60000); // keep the notification dot fresh without a reload
   });
 })();

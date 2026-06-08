@@ -19,6 +19,9 @@
   flex-direction: column;
   padding: 20px 14px;
   z-index: 30;
+  height: 100vh;   /* pin to viewport (like .app-main) so the nav scrolls inside */
+  min-height: 0;
+  overflow: hidden;
 }
 .app-brand {
   font-family: 'Sora', sans-serif;
@@ -26,9 +29,10 @@
   font-size: 20px;
   letter-spacing: 0.04em;
   padding: 6px 10px 18px;
+  flex-shrink: 0;
 }
 .app-brand span { color: var(--accent); }
-.app-nav { display: flex; flex-direction: column; gap: 1px; flex: 1; overflow-y: auto; padding-right: 2px; }
+.app-nav { display: flex; flex-direction: column; gap: 1px; flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 2px; }
 .nav-sec { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.09em; color: rgba(255,255,255,0.32); padding: 15px 12px 6px; }
 .nav-item, .nav-grp-h {
   display: flex; align-items: center; gap: 11px; width: 100%;
@@ -55,7 +59,7 @@
 .nav-bookmarks a { display: flex; align-items: center; gap: 9px; padding: 9px 12px; border-radius: 8px; color: var(--muted); font-size: 13.5px; }
 .nav-bookmarks a .i { color: var(--accent); }
 .nav-bookmarks a:hover { color: var(--fg); background: rgba(255,255,255,0.045); }
-.app-side-foot { padding: 12px 10px 0; border-top: 1px solid var(--line-soft); }
+.app-side-foot { padding: 12px 10px 0; border-top: 1px solid var(--line-soft); flex-shrink: 0; }
 .app-side-link { color: var(--muted); font-size: 13px; }
 .app-side-link:hover { color: var(--fg); }
 
