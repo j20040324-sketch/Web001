@@ -1427,9 +1427,183 @@
         .map(function (x) { return '<a class="nav-item" href="#/' + x[0] + '" data-nav="' + x[0] + '">' + x[1] + '</a>'; }).join('');
   }
 
+  // ======================= Property management (PropTech) =======================
+  var PROPERTY_TYPE = [
+    ['RESIDENTIAL_HOUSE', '独立屋'], ['RESIDENTIAL_UNIT', '公寓单元'], ['APARTMENT', '公寓'],
+    ['TOWNHOUSE', '联排别墅'], ['COMMERCIAL_OFFICE', '商业办公'], ['COMMERCIAL_RETAIL', '商业零售'],
+    ['COMMERCIAL_INDUSTRIAL', '工业'], ['LAND', '土地'], ['OTHER', '其他'],
+  ];
+  var PROPERTY_STATUS = [
+    ['ACTIVE', '在管', 'green'], ['VACANT', '空置', 'gold'], ['LEASED', '已出租', 'green'],
+    ['UNDER_MAINTENANCE', '维修中', 'gold'], ['OFF_MARKET', '下架', ''], ['ARCHIVED', '已归档', ''],
+  ];
+  var UNIT_STATUS = [['AVAILABLE', '可用'], ['OCCUPIED', '已占用'], ['UNDER_MAINTENANCE', '维修中'], ['UNAVAILABLE', '不可用']];
+  var OWNER_TYPE = [['INDIVIDUAL', '个人'], ['COMPANY', '公司'], ['TRUST', '信托'], ['PARTNERSHIP', '合伙']];
+
+  function propStatusBadge(v) {
+    for (var i = 0; i < PROPERTY_STATUS.length; i++) if (PROPERTY_STATUS[i][0] === v) return badge(PROPERTY_STATUS[i][1], PROPERTY_STATUS[i][2]);
+    return badge(v);
+  }
+  function ownerName(o) { return (o.companyName || ((o.firstName || '') + ' ' + (o.lastName || '')).trim()) || '业主'; }
+  // numeric form fields arrive as strings — convert present keys, drop blanks.
+  function numify(payload, intKeys, floatKeys) {
+    (intKeys || []).forEach(function (k) { if (payload[k] != null && payload[k] !== '') payload[k] = parseInt(payload[k], 10); else delete payload[k]; });
+    (floatKeys || []).forEach(function (k) { if (payload[k] != null && payload[k] !== '') payload[k] = Number(payload[k]); else delete payload[k]; });
+    return payload;
+  }
+
+  var fProps = { search: '', status: '', type: '', page: 1 };
+  function propsHead(total) {
+    return '<div class="pv-head"><div><h1>物业</h1><p>共 ' + total + ' 处</p></div><button class="b primary" id="add">+ 新建物业</button></div>';
+  }
+  async function viewProperties() {
+    loading();
+    var qs = '?page=' + fProps.page + '&pageSize=10';
+    if (fProps.search) qs += '&search=' + encodeURIComponent(fProps.search);
+    if (fProps.status) qs += '&status=' + fProps.status;
+    if (fProps.type) qs += '&type=' + fProps.type;
+    var r = await API.get('/properties' + qs);
+    var statusOpts = '<option value="">全部状态</option>' + PROPERTY_STATUS.map(function (s) { return '<option value="' + s[0] + '"' + (s[0] === fProps.status ? ' selected' : '') + '>' + s[1] + '</option>'; }).join('');
+    var typeOpts = '<option value="">全部类型</option>' + PROPERTY_TYPE.map(function (s) { return '<option value="' + s[0] + '"' + (s[0] === fProps.type ? ' selected' : '') + '>' + s[1] + '</option>'; }).join('');
+    var body;
+    if (!r.items.length && !fProps.search && !fProps.status && !fProps.type) {
+      body = emptyState('🏠', '还没有物业', '添加第一处物业，开始管理租约、验房与维修。', 'add', '+ 新建物业');
+    } else {
+      var rows = r.items.map(function (p) {
+        var rent = p.weeklyRent ? money(p.weeklyRent) + ' /周' : '-';
+        var units = p._count ? p._count.units : 0;
+        return '<tr class="clickable" data-id="' + p.id + '"><td>' + esc(p.addressLine) + (p.name ? ' <span style="color:var(--muted)">· ' + esc(p.name) + '</span>' : '') + '</td><td>' + esc(p.suburb || '-') + '</td><td>' + esc(labelOf(PROPERTY_TYPE, p.type)) + '</td><td>' + propStatusBadge(p.status) + '</td><td>' + rent + '</td><td>' + units + '</td></tr>';
+      }).join('') || '<tr><td class="empty" colspan="6">没有匹配的物业</td></tr>';
+      body = '<table class="tbl"><thead><tr><th>地址</th><th>区域</th><th>类型</th><th>状态</th><th>周租</th><th>单元</th></tr></thead><tbody>' + rows + '</tbody></table>' + pagerHtml(r.total, r.page, r.pageSize);
+    }
+    setView(propsHead(r.total) +
+      '<div class="filterbar"><input type="search" id="pq" placeholder="搜索地址 / 名称 / 区域…" value="' + esc(fProps.search) + '"/><select id="pst">' + statusOpts + '</select><select id="pty">' + typeOpts + '</select></div>' +
+      '<div class="panel">' + body + '</div>');
+    var addBtn = $('#add'); if (addBtn) addBtn.onclick = openCreateProperty;
+    $$('#view tr.clickable').forEach(function (tr) { tr.onclick = function () { location.hash = '#/properties/' + tr.dataset.id; }; });
+    var pq = $('#pq'); if (pq) pq.oninput = debounce(function (e) { fProps.search = e.target.value.trim(); fProps.page = 1; viewProperties(); }, 350);
+    var pst = $('#pst'); if (pst) pst.onchange = function (e) { fProps.status = e.target.value; fProps.page = 1; viewProperties(); };
+    var pty = $('#pty'); if (pty) pty.onchange = function (e) { fProps.type = e.target.value; fProps.page = 1; viewProperties(); };
+    bindPager(function (p) { fProps.page = p; viewProperties(); });
+  }
+
+  function propertyFields(p) {
+    return [
+      { name: 'addressLine', label: '地址（必填）', value: p ? p.addressLine : undefined },
+      { name: 'name', label: '名称/备注', value: p ? p.name : undefined },
+      { name: 'suburb', label: '区域', value: p ? p.suburb : undefined },
+      { name: 'state', label: '州', value: p ? p.state : undefined },
+      { name: 'postcode', label: '邮编', value: p ? p.postcode : undefined },
+      { name: 'type', label: '类型', type: 'select', options: PROPERTY_TYPE, value: p ? p.type : undefined },
+      { name: 'status', label: '状态', type: 'select', options: PROPERTY_STATUS.map(function (s) { return [s[0], s[1]]; }), value: p ? p.status : undefined },
+      { name: 'bedrooms', label: '卧室数', type: 'number', value: p ? p.bedrooms : undefined },
+      { name: 'bathrooms', label: '卫浴数', type: 'number', value: p ? p.bathrooms : undefined },
+      { name: 'carSpaces', label: '车位数', type: 'number', value: p ? p.carSpaces : undefined },
+      { name: 'weeklyRent', label: '周租金', type: 'number', value: p ? p.weeklyRent : undefined },
+      { name: 'notes', label: '备注', type: 'textarea', value: p ? p.notes : undefined },
+    ];
+  }
+  function openCreateProperty() {
+    formModal('新建物业', propertyFields(null), '创建', async function (d) {
+      var payload = numify(clean(d), ['bedrooms', 'bathrooms', 'carSpaces'], ['weeklyRent']);
+      if (!payload.addressLine) { toast('请填写地址', true); return; }
+      var p = await API.post('/properties', payload); closeModal(); toast('已创建'); location.hash = '#/properties/' + p.id;
+    });
+  }
+  function openEditProperty(p, id) {
+    formModal('编辑物业', propertyFields(p), '保存', async function (d) {
+      var payload = numify(clean(d), ['bedrooms', 'bathrooms', 'carSpaces'], ['weeklyRent']);
+      await API.patch('/properties/' + id, payload); closeModal(); toast('已保存'); viewPropertyDetail(id);
+    });
+  }
+
+  async function viewPropertyDetail(id) {
+    setView(skel(2) + skel(4));
+    var p = await API.get('/properties/' + id);
+    setView(
+      breadcrumb([{ label: '物业', href: '#/properties' }, { label: p.addressLine }]) +
+      '<div class="pv-head"><div><h1>' + esc(p.addressLine) + '</h1><p>' + propStatusBadge(p.status) + ' · ' + esc(labelOf(PROPERTY_TYPE, p.type)) + (p.suburb ? ' · ' + esc(p.suburb) : '') + '</p></div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="b" id="edit">编辑</button><button class="b danger" id="del">删除</button></div></div>' +
+      '<div class="tabs" id="ptabs"><button data-tab="overview" class="active">概览</button><button data-tab="units">单元</button><button data-tab="owners">业主</button></div><div id="ptabc"></div>');
+
+    function loadTab(t) {
+      var host = $('#ptabc');
+      if (t === 'overview') {
+        host.innerHTML = '<div class="detail"><div class="panel"><h3>物业资料</h3><dl class="kv">' +
+          '<dt>地址</dt><dd>' + esc(p.addressLine) + '</dd><dt>区域</dt><dd>' + esc(p.suburb || '-') + '</dd>' +
+          '<dt>州/邮编</dt><dd>' + esc(((p.state || '-') + ' ' + (p.postcode || '')).trim()) + '</dd>' +
+          '<dt>类型</dt><dd>' + esc(labelOf(PROPERTY_TYPE, p.type)) + '</dd><dt>状态</dt><dd>' + propStatusBadge(p.status) + '</dd>' +
+          '<dt>卧/卫/车</dt><dd>' + (p.bedrooms != null ? p.bedrooms : '-') + ' / ' + (p.bathrooms != null ? p.bathrooms : '-') + ' / ' + (p.carSpaces != null ? p.carSpaces : '-') + '</dd>' +
+          '<dt>周租金</dt><dd>' + (p.weeklyRent ? money(p.weeklyRent) : '-') + '</dd><dt>备注</dt><dd>' + esc(p.notes || '-') + '</dd></dl></div>' +
+          '<div class="panel"><h3>概况</h3><dl class="kv"><dt>单元数</dt><dd>' + ((p.units || []).length) + '</dd><dt>业主数</dt><dd>' + ((p.ownerships || []).length) + '</dd><dt>创建于</dt><dd>' + fmtDay(p.createdAt) + '</dd></dl></div></div>';
+      } else if (t === 'units') {
+        var urows = (p.units || []).map(function (u) {
+          return '<tr><td>' + esc(u.unitNumber) + '</td><td>' + esc(u.label || '-') + '</td><td>' + esc(labelOf(UNIT_STATUS, u.status)) + '</td><td>' + (u.weeklyRent ? money(u.weeklyRent) : '-') + '</td><td class="rowacts"><button class="b sm" data-eu="' + u.id + '">编辑</button><button class="b sm danger" data-du="' + u.id + '">删除</button></td></tr>';
+        }).join('') || '<tr><td class="empty" colspan="5">暂无单元</td></tr>';
+        host.innerHTML = '<div class="panel"><div style="display:flex;justify-content:flex-end;margin-bottom:10px"><button class="b primary" id="addUnit">+ 新增单元</button></div><table class="tbl"><thead><tr><th>单元号</th><th>标签</th><th>状态</th><th>周租</th><th></th></tr></thead><tbody>' + urows + '</tbody></table></div>';
+        $('#addUnit').onclick = function () { unitForm(null); };
+        $$('#ptabc [data-eu]').forEach(function (b) { b.onclick = function () { var u = (p.units || []).filter(function (x) { return x.id === b.dataset.eu; })[0]; unitForm(u); }; });
+        $$('#ptabc [data-du]').forEach(function (b) { b.onclick = function () { confirmDel('删除该单元？', async function () { await API.del('/properties/' + id + '/units/' + b.dataset.du); toast('已删除'); viewPropertyDetail(id); }); }; });
+      } else if (t === 'owners') {
+        var orows = (p.ownerships || []).map(function (os) {
+          return '<tr><td>' + esc(ownerName(os.owner)) + (os.isPrimary ? ' ' + badge('主', 'gold') : '') + '</td><td>' + esc(os.owner.email || '-') + '</td><td>' + (os.sharePercent != null ? os.sharePercent + '%' : '-') + '</td><td class="rowacts"><button class="b sm danger" data-do="' + os.id + '">移除</button></td></tr>';
+        }).join('') || '<tr><td class="empty" colspan="4">暂无业主</td></tr>';
+        host.innerHTML = '<div class="panel"><div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px"><button class="b" id="newOwner">+ 新建业主</button><button class="b primary" id="attachOwner">+ 关联业主</button></div><table class="tbl"><thead><tr><th>业主</th><th>邮箱</th><th>持股</th><th></th></tr></thead><tbody>' + orows + '</tbody></table></div>';
+        $('#newOwner').onclick = ownerCreateForm;
+        $('#attachOwner').onclick = attachOwnerForm;
+        $$('#ptabc [data-do]').forEach(function (b) { b.onclick = function () { confirmDel('移除该业主关联？', async function () { await API.del('/properties/' + id + '/owners/' + b.dataset.do); toast('已移除'); viewPropertyDetail(id); }); }; });
+      }
+    }
+    function unitForm(u) {
+      formModal(u ? '编辑单元' : '新增单元', [
+        { name: 'unitNumber', label: '单元号（必填）', value: u ? u.unitNumber : undefined },
+        { name: 'label', label: '标签', value: u ? u.label : undefined },
+        { name: 'status', label: '状态', type: 'select', options: UNIT_STATUS, value: u ? u.status : undefined },
+        { name: 'bedrooms', label: '卧室', type: 'number', value: u ? u.bedrooms : undefined },
+        { name: 'bathrooms', label: '卫浴', type: 'number', value: u ? u.bathrooms : undefined },
+        { name: 'weeklyRent', label: '周租金', type: 'number', value: u ? u.weeklyRent : undefined },
+      ], '保存', async function (d) {
+        var payload = numify(clean(d), ['bedrooms', 'bathrooms'], ['weeklyRent']);
+        if (u) { await API.patch('/properties/' + id + '/units/' + u.id, payload); }
+        else { if (!payload.unitNumber) { toast('请填单元号', true); return; } await API.post('/properties/' + id + '/units', payload); }
+        closeModal(); toast('已保存'); viewPropertyDetail(id);
+      });
+    }
+    function ownerCreateForm() {
+      formModal('新建业主', [
+        { name: 'type', label: '类型', type: 'select', options: OWNER_TYPE },
+        { name: 'firstName', label: '名' }, { name: 'lastName', label: '姓' },
+        { name: 'companyName', label: '公司名（公司/信托填）' },
+        { name: 'email', label: '邮箱' }, { name: 'phone', label: '电话' },
+      ], '创建', async function (d) {
+        var payload = clean(d);
+        if (!payload.firstName && !payload.lastName && !payload.companyName) { toast('请填写姓名或公司名', true); return; }
+        await API.post('/owners', payload); closeModal(); toast('已创建业主'); attachOwnerForm();
+      });
+    }
+    async function attachOwnerForm() {
+      var r = await API.get('/owners?pageSize=100');
+      if (!r.items.length) { toast('请先新建业主', true); return ownerCreateForm(); }
+      var opts = r.items.map(function (o) { return [o.id, ownerName(o)]; });
+      formModal('关联业主', [
+        { name: 'ownerId', label: '选择业主', type: 'select', options: opts },
+        { name: 'sharePercent', label: '持股比例(%)', type: 'number', value: 100 },
+        { name: 'isPrimary', label: '设为主业主', type: 'select', options: [['no', '否'], ['yes', '是']] },
+      ], '关联', async function (d) {
+        var payload = { ownerId: d.ownerId, sharePercent: d.sharePercent ? Number(d.sharePercent) : 100, isPrimary: d.isPrimary === 'yes' };
+        await API.post('/properties/' + id + '/owners', payload); closeModal(); toast('已关联'); viewPropertyDetail(id);
+      });
+    }
+
+    $$('#ptabs button').forEach(function (b) { b.onclick = function () { $$('#ptabs button').forEach(function (x) { x.classList.remove('active'); }); b.classList.add('active'); loadTab(b.dataset.tab); }; });
+    loadTab('overview');
+    $('#edit').onclick = function () { openEditProperty(p, id); };
+    $('#del').onclick = function () { confirmDel('删除物业「' + p.addressLine + '」？此操作不可撤销。', async function () { await API.del('/properties/' + id); toast('已删除'); location.hash = '#/properties'; }); };
+  }
+
   // ======================= shell + router =======================
-  var ROUTES = { dashboard: viewDashboard, clients: viewClients, tasks: viewTasks, projects: viewProjects, files: viewFiles, contracts: viewContracts, invoices: viewInvoices, messages: viewMessages, report: viewReportDocs, reports: viewReports, automations: viewAutomations, integrations: viewIntegrations, announcements: viewAnnouncements, email: viewEmail, team: viewTeam, settings: viewSettings, audit: viewAudit, account: viewAccount };
-  var TITLES = { dashboard: '仪表盘', clients: '客户', tasks: '任务', projects: '项目', files: '文件', contracts: '合同', invoices: '发票', messages: '消息', report: '报告', reports: '报表', automations: '自动化', integrations: '集成', announcements: '公告', email: '邮箱', team: '团队', settings: '设置', audit: '审计日志', account: '个人信息' };
+  var ROUTES = { dashboard: viewDashboard, clients: viewClients, properties: viewProperties, tasks: viewTasks, projects: viewProjects, files: viewFiles, contracts: viewContracts, invoices: viewInvoices, messages: viewMessages, report: viewReportDocs, reports: viewReports, automations: viewAutomations, integrations: viewIntegrations, announcements: viewAnnouncements, email: viewEmail, team: viewTeam, settings: viewSettings, audit: viewAudit, account: viewAccount };
+  var TITLES = { dashboard: '仪表盘', clients: '客户', properties: '物业', tasks: '任务', projects: '项目', files: '文件', contracts: '合同', invoices: '发票', messages: '消息', report: '报告', reports: '报表', automations: '自动化', integrations: '集成', announcements: '公告', email: '邮箱', team: '团队', settings: '设置', audit: '审计日志', account: '个人信息' };
 
   var currentKey = 'dashboard';
   function setActiveNav(key) {
@@ -1519,6 +1693,7 @@
         return await pfn(parts.slice(1));
       }
       if (key === 'clients' && parts[1]) return await viewClientDetail(parts[1]);
+      if (key === 'properties' && parts[1]) return await viewPropertyDetail(parts[1]);
       var fn = ROUTES[key] || viewDashboard;
       await fn(parts.slice(1));
     } catch (e) {
