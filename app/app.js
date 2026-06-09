@@ -207,12 +207,15 @@
     { id: 'kpi_unsigned', title: '未签合同' }, { id: 'kpi_due_today', title: '今日到期任务' },
     { id: 'kpi_revenue_paid', title: '已收款' }, { id: 'kpi_revenue_out', title: '待收款' },
     { id: 'kpi_sign_rate', title: '合同签署率' }, { id: 'kpi_task_completion', title: '任务完成率' },
+    { id: 'kpi_properties', title: '物业总数' }, { id: 'kpi_active_leases', title: '在租租约' },
+    { id: 'kpi_arrears', title: '欠租金额' }, { id: 'kpi_open_jobs', title: '维修工单' },
+    { id: 'kpi_due_inspections', title: '待办验房' },
     { id: 'revenue', title: '收入概览（图）' }, { id: 'chart_clients', title: '客户分布（图）' },
     { id: 'chart_invoices', title: '发票状态（图）' }, { id: 'chart_contracts', title: '合同状态（图）' },
     { id: 'chart_projects', title: '项目状态（图）' }, { id: 'focus', title: '今日待办' },
     { id: 'activity', title: '最近动态' },
   ];
-  var DASH_DEFAULT = ['kpi_clients', 'kpi_projects', 'kpi_overdue_tasks', 'kpi_unpaid', 'revenue', 'chart_clients', 'focus', 'activity'];
+  var DASH_DEFAULT = ['kpi_clients', 'kpi_projects', 'kpi_overdue_tasks', 'kpi_unpaid', 'kpi_properties', 'kpi_arrears', 'revenue', 'chart_clients', 'focus', 'activity'];
   function catTitle(id) { for (var i = 0; i < DASH_CATALOG.length; i++) if (DASH_CATALOG[i].id === id) return DASH_CATALOG[i].title; return id; }
   function getDashConfig() {
     try { var v = JSON.parse(localStorage.getItem('novai-dash') || 'null'); if (v && v.order && v.order.length) return { order: v.order.filter(catTitleExists), sizes: v.sizes || {} }; } catch (e) {}
@@ -227,6 +230,7 @@
 
   function dashWidgets(ctx) {
     var m = ctx.m, rep = ctx.rep;
+    var prop = ctx.prop || { properties: 0, activeLeases: 0, arrears: { totalOutstanding: 0 }, jobs: 0, dueInspections: 0 };
     var clientsTotal = rep ? sumVals(rep.clientsByStatus) : 0;
     var taskCompletion = 0;
     if (rep) { var tt = sumVals(rep.tasksByStatus); taskCompletion = tt ? Math.round((rep.tasksByStatus.DONE || 0) / tt * 100) : 0; }
@@ -258,6 +262,11 @@
       kpi_revenue_out: { size: 'kpi', html: rep ? kpi('$', money(rep.revenue.outstanding), '待收款', rep.revenue.outstanding > 0) : '' },
       kpi_sign_rate: { size: 'kpi', html: rep ? kpi('✎', rep.contractSignRate + '%', '合同签署率') : '' },
       kpi_task_completion: { size: 'kpi', html: rep ? kpi('✓', taskCompletion + '%', '任务完成率') : '' },
+      kpi_properties: { size: 'kpi', html: kpi('⌂', prop.properties, '物业总数') },
+      kpi_active_leases: { size: 'kpi', html: kpi('▤', prop.activeLeases, '在租租约') },
+      kpi_arrears: { size: 'kpi', html: kpi('$', money(prop.arrears.totalOutstanding), '欠租金额', (prop.arrears.totalOutstanding || 0) > 0) },
+      kpi_open_jobs: { size: 'kpi', html: kpi('⚙', prop.jobs, '维修工单') },
+      kpi_due_inspections: { size: 'kpi', html: kpi('◉', prop.dueInspections, '待办验房') },
       revenue: { size: 'half', html: revHtml },
       chart_clients: { size: 'half', html: rep ? panelBars('客户分布', clientBars()) : '' },
       chart_invoices: { size: 'half', html: rep ? ('<div class="panel"><h3>发票状态</h3>' + donut(invSeg()) + '</div>') : '' },
@@ -388,8 +397,24 @@
       API.get('/tasks?overdue=true&pageSize=6').catch(function () { return { items: [] }; }),
       API.get('/contracts').catch(function () { return { items: [] }; }),
       API.get('/invoices').catch(function () { return { items: [] }; }),
+      // PropTech aggregates (graceful — default to 0 if the module/permission is absent)
+      API.get('/properties?pageSize=1').catch(function () { return { total: 0 }; }),
+      API.get('/leases?status=ACTIVE&pageSize=1').catch(function () { return { total: 0 }; }),
+      API.get('/leases/arrears').catch(function () { return { totalOutstanding: 0, count: 0 }; }),
+      API.get('/maintenance/jobs?pageSize=1').catch(function () { return { total: 0 }; }),
+      API.get('/inspections?status=SCHEDULED&pageSize=1').catch(function () { return { total: 0 }; }),
     ]);
-    var ctx = { m: res[0].metrics, rep: res[1], overdue: res[2], contracts: res[3], invoices: res[4], recent: res[0].recentActivity };
+    var ctx = {
+      m: res[0].metrics, rep: res[1], overdue: res[2], contracts: res[3], invoices: res[4],
+      recent: res[0].recentActivity,
+      prop: {
+        properties: res[5].total || 0,
+        activeLeases: res[6].total || 0,
+        arrears: res[7] || { totalOutstanding: 0, count: 0 },
+        jobs: res[8].total || 0,
+        dueInspections: res[9].total || 0,
+      },
+    };
     dashState.widgets = dashWidgets(ctx);
     var cfg = getDashConfig();
     dashState.order = cfg.order.filter(function (id) { return dashState.widgets[id]; });
@@ -403,7 +428,21 @@
   var CONTRACT_LABEL = { DRAFT: '草稿', SENT: '已发送', VIEWED: '已查看', SIGNED: '已签署', CANCELLED: '已取消', EXPIRED: '已过期' };
   async function viewReports() {
     setView(skel(3) + skel(4));
-    var rep = await API.get('/reports/summary');
+    var pres = await Promise.all([
+      API.get('/reports/summary'),
+      API.get('/properties?pageSize=1').catch(function () { return { total: 0 }; }),
+      API.get('/leases?status=ACTIVE&pageSize=1').catch(function () { return { total: 0 }; }),
+      API.get('/leases/arrears').catch(function () { return { totalOutstanding: 0, count: 0 }; }),
+      API.get('/maintenance/jobs?pageSize=1').catch(function () { return { total: 0 }; }),
+    ]);
+    var rep = pres[0];
+    var ptech = { properties: pres[1].total || 0, activeLeases: pres[2].total || 0, arrears: pres[3] || { totalOutstanding: 0 }, jobs: pres[4].total || 0 };
+    var anyPtech = ptech.properties || ptech.activeLeases || ptech.jobs || (ptech.arrears.totalOutstanding || 0);
+    var ptechRow = anyPtech ? ('<h3 style="margin:4px 0 12px;font-family:Sora;font-size:16px">地产指标</h3><div class="kpi-grid">' +
+      kpi('⌂', ptech.properties, '物业总数') +
+      kpi('▤', ptech.activeLeases, '在租租约') +
+      kpi('$', money(ptech.arrears.totalOutstanding), '欠租金额', (ptech.arrears.totalOutstanding || 0) > 0) +
+      kpi('⚙', ptech.jobs, '维修工单') + '</div>') : '';
     var inv = rep.invoicesByStatus, cb = rep.clientsByStatus, ct = rep.contractsByStatus, tk = rep.tasksByStatus, pj = rep.projectsByStatus;
     var invSeg = [
       { label: '已付', value: inv.PAID || 0, color: CHART.green },
@@ -422,7 +461,7 @@
       kpi('$', money(rep.revenue.outstanding), '待收款', rep.revenue.outstanding > 0) +
       kpi('✎', rep.contractSignRate + '%', '合同签署率') +
       kpi('✓', completion + '%', '任务完成率') +
-      '</div>' +
+      '</div>' + ptechRow +
       '<div class="grid2"><div class="panel"><h3>发票状态</h3>' + donut(invSeg) + '</div>' +
       '<div class="panel"><h3>客户分布</h3>' + (clientBars.length ? bars(clientBars) : '<p class="loading">暂无数据</p>') + '</div></div>' +
       '<div class="grid2"><div class="panel"><h3>合同状态</h3>' + (contractBars.length ? bars(contractBars) : '<p class="loading">暂无数据</p>') + '</div>' +
